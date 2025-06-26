@@ -13,9 +13,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, nombre, grupoId, directorId } = req.body
+    const { nombre, grupoId, directorId } = req.body
 
-    if (!email || !nombre || !grupoId || !directorId) {
+    if (!nombre || !grupoId || !directorId) {
       return res.status(400).json({ error: 'Faltan datos requeridos' })
     }
 
@@ -30,8 +30,36 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'No autorizado o director no encontrado' })
     }
 
+    // Obtener información del grupo para generar el email
+    const { data: grupo, error: errorGrupo } = await supabaseAdmin
+      .from('grupos')
+      .select('nombre, escuelas:escuela_id (nombre)')
+      .eq('id', grupoId)
+      .single()
+
+    if (errorGrupo || !grupo) {
+      return res.status(400).json({ error: 'Grupo no encontrado' })
+    }
+
+    // Extraer primer nombre y primer apellido
+    const nombreParts = nombre
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      .split(' ');
+    
+    const primerNombre = nombreParts[0];
+    const primerApellido = nombreParts.length > 1 ? nombreParts[1] : '';
+    
+    // Generar número aleatorio de 4 dígitos
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    
+    // Crear email más corto
+    const email = `${primerNombre}${primerApellido ? '.' + primerApellido : ''}${randomNum}@asistenciapp.edu`;
+
     // Generar contraseña aleatoria
-    const password = Math.random().toString(36).slice(-8);
+    // Usar contraseña por defecto en lugar de aleatoria
+    const password = 'password123';
 
     // 1. Crear usuario en Auth
     const { data: userData, error: errorAuth } = await supabaseAdmin.auth.admin.createUser({
@@ -67,7 +95,7 @@ export default async function handler(req, res) {
         {
           usuario_id: userData.user.id,
           grupo_id: grupoId,
-          escuela_id: director.escuela_id  // Añadir esta línea
+          escuela_id: director.escuela_id
         }
       ])
       .select()
@@ -79,8 +107,12 @@ export default async function handler(req, res) {
     // Devolver respuesta exitosa
     return res.status(200).json({
       success: true,
-      data: alumnoData[0],
-      message: `Alumno creado correctamente. Contraseña temporal: ${password}`
+      data: {
+        ...alumnoData[0],
+        nombre,
+        email
+      },
+      message: `Alumno creado correctamente. Email: ${email} | Contraseña temporal: ${password}`
     })
   } catch (error) {
     console.error('Error al crear alumno:', error)

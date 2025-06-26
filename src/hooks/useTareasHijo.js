@@ -59,51 +59,91 @@ export default function useTareasHijo(alumnoId) {
         });
 
         // Obtener materias del grupo del alumno
-        const { data: materiasData, error: errorMaterias } = await supabase
-          .from('materias')
-          .select('id')
+        const { data: asignacionesGrupo } = await supabase
+          .from('asignaciones')
+          .select('materia_id')
           .eq('grupo_id', alumnoData.grupo_id);
 
-        if (errorMaterias) {
-          setError('Error al cargar materias');
-          return;
-        }
-
-        if (!materiasData || materiasData.length === 0) {
+        if (!asignacionesGrupo || asignacionesGrupo.length === 0) {
           setTareas([]);
           return;
         }
 
-        // Cargar tareas de las materias del alumno
-        const { data: tareasData, error: errorTareas } = await supabase
+        // Extraer IDs de materias de las asignaciones
+        const materiaIds = asignacionesGrupo.map(a => a.materia_id);
+
+        // Obtener tareas con entregas
+        const { data: tareasEntregadas } = await supabase
           .from('tareas')
           .select(`
             id,
             titulo,
             descripcion,
             fecha_entrega,
+            materia_id,
             materias:materia_id (nombre),
-            entregas!inner (calificacion)
+            entregas!inner (id, alumno_id, archivo_url, calificacion)
           `)
-          .in('materia_id', materiasData.map(m => m.id))
+          .in('materia_id', materiaIds)
           .eq('entregas.alumno_id', alumnoId);
 
-        if (errorTareas) {
-          setError('Error al cargar tareas');
-          return;
+        // Obtener tareas sin entregas
+        let tareasSinEntrega = [];
+        
+        // Solo ejecutar esta consulta si hay materias asignadas
+        if (materiaIds.length > 0) {
+          const tareasEntregadasIds = (tareasEntregadas || []).map(t => t.id);
+          
+          // Consulta para tareas sin entregas
+          let query = supabase
+            .from('tareas')
+            .select(`
+              id, 
+              titulo, 
+              descripcion,
+              fecha_entrega,
+              materia_id,
+              materias:materia_id (nombre)
+            `)
+            .in('materia_id', materiaIds);
+          
+          // Solo aplicar el filtro de exclusión si hay tareas entregadas
+          if (tareasEntregadasIds.length > 0) {
+            query = query.not('id', 'in', tareasEntregadasIds);
+          }
+          
+          const { data: sinEntregaData } = await query;
+          tareasSinEntrega = sinEntregaData || [];
         }
 
-        // Formatear tareas
-        const tareasFormateadas = tareasData.map(t => ({
-          id: t.id,
-          titulo: t.titulo,
-          descripcion: t.descripcion,
-          fecha: new Date(t.fecha_entrega).toLocaleDateString('es-MX'),
-          materia: t.materias?.nombre || 'Sin nombre',
-          calificacion: t.entregas[0]?.calificacion || 'Pendiente'
-        }));
+        // Combinar y formatear tareas
+        const todasTareas = [
+          ...(tareasEntregadas || []).map(t => ({
+            id: t.id,
+            titulo: t.titulo,
+            descripcion: t.descripcion,
+            fecha: new Date(t.fecha_entrega).toLocaleDateString('es-MX'),
+            fechaEntrega: new Date(t.fecha_entrega).toLocaleDateString('es-MX'),
+            materia: t.materias?.nombre || 'Sin materia',
+            entregada: true,
+            calificacion: t.entregas[0]?.calificacion || 'Pendiente'
+          })),
+          ...(tareasSinEntrega || []).map(t => ({
+            id: t.id,
+            titulo: t.titulo,
+            descripcion: t.descripcion,
+            fecha: new Date(t.fecha_entrega).toLocaleDateString('es-MX'),
+            fechaEntrega: new Date(t.fecha_entrega).toLocaleDateString('es-MX'),
+            materia: t.materias?.nombre || 'Sin materia',
+            entregada: false,
+            calificacion: 'Pendiente'
+          }))
+        ];
 
-        setTareas(tareasFormateadas);
+        // Ordenar por fecha de entrega (más recientes primero)
+        todasTareas.sort((a, b) => new Date(b.fecha_entrega) - new Date(a.fecha_entrega));
+
+        setTareas(todasTareas);
       } catch (error) {
         setError('Error: ' + error.message);
       } finally {

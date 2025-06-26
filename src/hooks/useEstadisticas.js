@@ -49,8 +49,6 @@ export default function useEstadisticas() {
           setError('Error al obtener maestros: ' + errorMaestros.message);
           return;
         }
-        
-        console.log('Total maestros encontrados:', totalMaestros);
 
         // Obtener total de alumnos
         const { count: totalAlumnos, error: errorAlumnos } = await supabase
@@ -63,19 +61,22 @@ export default function useEstadisticas() {
           setError('Error al obtener alumnos: ' + errorAlumnos.message);
           return;
         }
-        
-        console.log('Total alumnos encontrados:', totalAlumnos);
 
-        // Por ahora, omitimos el cálculo de asistencias para evitar el error
-        // y solo actualizamos los conteos de maestros y alumnos
-        setEstadisticas({
-          totalMaestros: totalMaestros || 0,
-          totalAlumnos: totalAlumnos || 0,
-          asistenciaDia: 0,
-          asistenciaSemana: 0
-        });
+        // Obtener IDs de todos los alumnos de la escuela
+        const { data: alumnosIds, error: errorAlumnosIds } = await supabase
+          .from('alumnos')
+          .select('id')
+          .eq('escuela_id', escuelaId);
 
-        /* Comentamos temporalmente el código de asistencias que causa el error
+        if (errorAlumnosIds) {
+          console.error('Error al obtener IDs de alumnos:', errorAlumnosIds);
+          setError('Error al obtener IDs de alumnos: ' + errorAlumnosIds.message);
+          return;
+        }
+
+        // Extraer solo los IDs en un array
+        const idsAlumnos = alumnosIds.map(alumno => alumno.id);
+
         // Calcular asistencia del día
         const fechaHoy = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
         
@@ -84,11 +85,12 @@ export default function useEstadisticas() {
           .from('asistencias')
           .select('presente')
           .eq('fecha', fechaHoy)
-          .in('alumno_id', supabase.from('alumnos').select('id').eq('escuela_id', escuelaId));
+          .in('alumno_id', idsAlumnos);
 
         if (errorAsistenciasHoy) {
-          setError('Error al obtener asistencias del día');
-          return;
+          console.error('Error al obtener asistencias del día:', errorAsistenciasHoy);
+          setError('Error al obtener asistencias del día: ' + errorAsistenciasHoy.message);
+          // Continuamos con el resto de las estadísticas
         }
 
         // Calcular porcentaje de asistencia del día
@@ -107,11 +109,12 @@ export default function useEstadisticas() {
           .from('asistencias')
           .select('presente')
           .gte('fecha', fechaSemana)
-          .in('alumno_id', supabase.from('alumnos').select('id').eq('escuela_id', escuelaId));
+          .in('alumno_id', idsAlumnos);
 
         if (errorAsistenciasSemana) {
-          setError('Error al obtener asistencias de la semana');
-          return;
+          console.error('Error al obtener asistencias de la semana:', errorAsistenciasSemana);
+          setError('Error al obtener asistencias de la semana: ' + errorAsistenciasSemana.message);
+          // Continuamos con el resto de las estadísticas
         }
 
         // Calcular porcentaje de asistencia de la semana
@@ -121,13 +124,13 @@ export default function useEstadisticas() {
 
         // Actualizar estadísticas
         setEstadisticas({
-          totalMaestros,
-          totalAlumnos,
-          asistenciaDia,
-          asistenciaSemana
+          totalMaestros: totalMaestros || 0,
+          totalAlumnos: totalAlumnos || 0,
+          asistenciaDia: asistenciaDia || 0,
+          asistenciaSemana: asistenciaSemana || 0
         });
-        */
       } catch (error) {
+        console.error('Error general:', error);
         setError('Error: ' + error.message);
       } finally {
         setLoading(false);

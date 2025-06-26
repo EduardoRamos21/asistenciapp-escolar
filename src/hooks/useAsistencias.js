@@ -218,18 +218,20 @@ export default function useAsistencias() {
     if (!materiaSeleccionada || !grupoSeleccionado) {
       return { success: false, error: 'Selecciona grupo y materia' };
     }
-
+  
     try {
       const fecha = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const horaActual = new Date().toTimeString().split(' ')[0]; // Formato HH:MM:SS
       
       // Preparar datos para insertar
       const asistenciasData = Object.entries(asistencias).map(([alumnoId, presente]) => ({
         alumno_id: parseInt(alumnoId),
         materia_id: parseInt(materiaSeleccionada),
         fecha,
+        hora: horaActual,
         presente
       }));
-
+  
       // Insertar asistencias
       const { error } = await supabase
         .from('asistencias')
@@ -237,11 +239,103 @@ export default function useAsistencias() {
           onConflict: 'alumno_id,materia_id,fecha',
           ignoreDuplicates: false
         });
-
+  
       if (error) {
         return { success: false, error: error.message };
       }
+  
+      // Obtener información de la materia para las notificaciones
+      const { data: materiaInfo } = await supabase
+        .from('materias')
+        .select('nombre')
+        .eq('id', materiaSeleccionada)
+        .single();
+  
+      // Enviar notificaciones para alumnos ausentes
+      const alumnosAusentes = Object.entries(asistencias)
+        .filter(([_, presente]) => !presente)
+        .map(([alumnoId]) => parseInt(alumnoId));
+  
+      if (alumnosAusentes.length > 0) {
+        // Obtener información de los alumnos ausentes
+        const { data: infoAlumnos } = await supabase
+          .from('alumnos')
+          .select(`
+            id,
+            usuarios:usuario_id (nombre)
+          `)
+          .in('id', alumnosAusentes);
+  
+        // Para cada alumno ausente, buscar sus padres y enviar notificación
+        for (const alumno of infoAlumnos) {
+          // Obtener los padres del alumno
+          const { data: padresData, error: padresError } = await supabase
+            .from('padre_alumno')
+            .select(`
+              padre_id
+            `)
+            .eq('alumno_id', alumno.id);
 
+          if (padresError) {
+            console.error('Error al obtener padres:', padresError);
+            continue;
+          }
+
+          // Obtener información de contacto de los padres
+          const padresIds = padresData.map(p => p.padre_id);
+          
+          const { data: infoPadres, error: infoPadresError } = await supabase
+            .from('info_padres')
+            .select('id, telefono, notificaciones_whatsapp')
+            .in('id', padresIds);
+
+          if (infoPadresError) {
+            console.error('Error al obtener info de padres:', infoPadresError);
+            continue;
+          }
+
+          // Filtrar padres que tienen notificaciones activadas y teléfono
+          const padresNotificar = infoPadres
+            .filter(p => p.notificaciones_whatsapp && p.telefono)
+            .map(p => ({
+              telefono: p.telefono,
+              nombreAlumno: alumno.usuarios?.nombre || 'su hijo/a',
+              nombreMateria: materiaInfo?.nombre || 'una materia'
+            }));
+          
+          // Aquí enviaríamos las notificaciones WhatsApp
+          if (padresNotificar.length > 0) {
+            console.log('Generando enlaces WhatsApp para:', padresNotificar);
+            
+            // Enviar notificaciones a cada padre
+            for (const padre of padresNotificar) {
+              try {
+                const response = await fetch('/api/enviar-whatsapp', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    telefono: padre.telefono,
+                    mensaje: `Su hijo/a ${padre.nombreAlumno} ha sido marcado como ausente en ${padre.nombreMateria} el día ${fecha} a las ${horaActual.substring(0, 5)}`,
+                  }),
+                });
+                
+                const result = await response.json();
+                console.log('Resultado de generación de enlace:', result);
+                
+                // Si se generó el enlace correctamente, abrirlo en una nueva ventana
+                if (result.success && result.whatsappLink) {
+                  window.open(result.whatsappLink, '_blank');
+                }
+              } catch (error) {
+                console.error('Error al generar enlace WhatsApp:', error);
+              }
+            }
+          }
+        }
+      }
+  
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

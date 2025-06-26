@@ -40,3 +40,13 @@ body {
   animation: fade-in 0.4s ease-out;
 }
 
+/* Estilo para exportación a PDF */
+.light-mode-export {
+  background-color: white !important;
+  color: black !important;
+}
+
+.light-mode-export * {
+  color-scheme: light !important;
+}
+

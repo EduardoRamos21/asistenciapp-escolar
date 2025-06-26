@@ -1,21 +1,21 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import useAuth from '@/hooks/useAuth';
-import LayoutMaestro from '@/components/LayoutMaestro';
+import LayoutAlumno from '@/components/LayoutAlumno';
 
-export default function MaestroHome() {
+export default function AlumnoHome() {
   const { user, loading } = useAuth(true);
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirigir a la página de asistencia
-      router.push('/maestro/asistencia');
+      // Redirigir a la página de tareas
+      router.push('/alumno/tareas');
     }
   }, [loading, user, router]);
 
   return (
-    <LayoutMaestro>
+    <LayoutAlumno>
       <div className="flex-1 w-full h-full flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
@@ -24,10 +24,9 @@ export default function MaestroHome() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           </div>
-          <p className="text-xl font-medium text-gray-700 dark:text-gray-300">Redirigiendo...</p>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Por favor espere mientras le redirigimos a la página de asistencias.</p>
+          <p className="text-gray-600 dark:text-gray-400">Cargando...</p>
         </div>
       </div>
-    </LayoutMaestro>
+    </LayoutAlumno>
   );
 }

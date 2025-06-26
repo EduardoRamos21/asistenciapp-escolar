@@ -1,15 +1,16 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
-import { FaHome, FaChild } from 'react-icons/fa'
+import { HiOutlineClipboardList } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
 
-export default function LayoutPadre({ children }) {
+export default function LayoutAlumno({ children }) {
   const router = useRouter()
-  const [hijos, setHijos] = useState([])
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [usuario, setUsuario] = useState(null)
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -17,47 +18,37 @@ export default function LayoutPadre({ children }) {
   }
 
   useEffect(() => {
-    const fetchHijos = async () => {
+    const fetchUsuario = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
         return
       }
 
-      // Verificar que el usuario es padre
+      // Verificar que el usuario es alumno
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
-        .select('rol')
+        .select('rol, nombre, avatar_url')
         .eq('id', user.id)
         .single()
 
-      if (userError || userData?.rol !== 'padre') {
+      if (userError || userData?.rol !== 'alumno') {
         router.push('/')
         return
       }
 
-      // Obtener hijos del padre
-      const { data: hijosData, error: hijosError } = await supabase
-        .from('padre_alumno')
-        .select(`
-          alumno_id,
-          alumnos:alumno_id (id, usuarios:usuario_id (nombre))
-        `)
-        .eq('padre_id', user.id)
-
-      if (!hijosError && hijosData) {
-        const hijosFormateados = hijosData.map(h => ({
-          id: h.alumno_id,
-          nombre: h.alumnos?.usuarios?.nombre || 'Alumno'
-        }))
-        setHijos(hijosFormateados)
-      }
+      setUsuario({
+        id: user.id,
+        nombre: userData.nombre,
+        email: user.email,
+        avatar_url: userData.avatar_url
+      })
 
       setLoading(false)
     }
 
-    fetchHijos()
-  }, [router])
+    fetchUsuario()
+  }, [router, router.pathname])
 
   return (
     <div className="flex flex-col md:flex-row h-screen min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
@@ -90,16 +81,28 @@ export default function LayoutPadre({ children }) {
           </div>
 
           <nav className="p-4 space-y-4">
-            <Link href="/padre" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/padre' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
-              <FaHome className="text-xl" />
-              <span>Inicio</span>
+            <Link href="/alumno/tareas" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/alumno/tareas' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+              <HiOutlineClipboardList className="text-xl" />
+              <span>Tareas</span>
             </Link>
           </nav>
         </div>
 
         <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-1">
-          <Link href="/padre/cuenta" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/padre/cuenta' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
-            <FiUser className="text-xl" />
+          <Link href="/alumno/cuenta" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/alumno/cuenta' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+            {usuario?.avatar_url ? (
+              <div className="relative w-6 h-6 rounded-full overflow-hidden">
+                <Image 
+                  src={usuario.avatar_url} 
+                  alt="Perfil" 
+                  fill={true}
+                  sizes="24px" 
+                  className="object-cover" 
+                />
+              </div>
+            ) : (
+              <FiUser className="text-xl" />
+            )}
             <span>Mi cuenta</span>
           </Link>
           <Link href="/ayuda" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/ayuda' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>

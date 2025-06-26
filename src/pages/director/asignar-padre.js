@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 import { HiMagnifyingGlass, HiPlus, HiTrash } from 'react-icons/hi2'
+import { RiParentLine } from 'react-icons/ri'
+import { FaUserGraduate } from 'react-icons/fa'
 
 export default function AsignarPadre() {
   const [loading, setLoading] = useState(true)
@@ -225,188 +227,248 @@ export default function AsignarPadre() {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Asignar Padres a Alumnos</h1>
-        <p className="text-gray-600">Gestiona las relaciones entre padres y alumnos</p>
-      </div>
-
-      {mensaje.texto && (
-        <div className={`p-4 mb-6 rounded-lg ${
-          mensaje.tipo === 'exito' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {mensaje.texto}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Encabezado con gradiente */}
+        <div className="mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
+          <h1 className="text-3xl font-bold mb-2">Asignar Padres a Alumnos</h1>
+          <p className="text-indigo-100">Gestiona las relaciones entre padres y alumnos de tu escuela</p>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Selección de Padre */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Seleccionar Padre</h2>
-          
-          <div className="relative mb-4">
-            <input
-              type="text"
-              placeholder="Buscar padre por nombre o email"
-              className="w-full p-3 border rounded-lg pl-10"
-              value={busquedaPadre}
-              onChange={(e) => setBusquedaPadre(e.target.value)}
-            />
-            <HiMagnifyingGlass className="absolute left-3 top-3.5 text-gray-400" />
-          </div>
-
-          <div className="h-64 overflow-y-auto border rounded-lg">
-            {loading ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-              </div>
-            ) : padresFiltrados.length === 0 ? (
-              <div className="flex justify-center items-center h-full text-gray-500">
-                No se encontraron padres
-              </div>
-            ) : (
-              <ul className="divide-y">
-                {padresFiltrados.map(padre => (
-                  <li 
-                    key={padre.id} 
-                    className={`p-3 cursor-pointer hover:bg-gray-50 ${
-                      padreSeleccionado?.id === padre.id ? 'bg-blue-50' : ''
-                    }`}
-                    onClick={() => setPadreSeleccionado(padre)}
-                  >
-                    <div className="font-medium">{padre.nombre}</div>
-                    <div className="text-sm text-gray-500">{padre.email}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {padreSeleccionado && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <div className="font-medium">Padre seleccionado:</div>
-              <div>{padreSeleccionado.nombre}</div>
-              <button 
-                className="mt-2 text-sm text-red-600 hover:text-red-800"
-                onClick={() => setPadreSeleccionado(null)}
-              >
-                Cancelar selección
-              </button>
+        {/* Mensajes de éxito o error con animación y gradiente */}
+        {mensaje.texto && (
+          <div 
+            className={`p-4 mb-8 rounded-xl shadow-md border-l-4 flex items-center animate-fadeIn ${mensaje.tipo === 'exito' 
+              ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-500 text-green-800' 
+              : 'bg-gradient-to-r from-red-50 to-red-100 border-red-500 text-red-800'
+            }`}
+          >
+            <div className={`rounded-full p-2 mr-3 ${mensaje.tipo === 'exito' ? 'bg-green-200' : 'bg-red-200'}`}>
+              {mensaje.tipo === 'exito' 
+                ? <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                : <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path></svg>
+              }
             </div>
-          )}
-        </div>
-
-        {/* Selección de Alumno */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Seleccionar Alumno</h2>
-          
-          <div className="relative mb-4">
-            <input
-              type="text"
-              placeholder="Buscar alumno por nombre, email o grupo"
-              className="w-full p-3 border rounded-lg pl-10"
-              value={busquedaAlumno}
-              onChange={(e) => setBusquedaAlumno(e.target.value)}
-            />
-            <HiMagnifyingGlass className="absolute left-3 top-3.5 text-gray-400" />
-          </div>
-
-          <div className="h-64 overflow-y-auto border rounded-lg">
-            {loading ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-              </div>
-            ) : alumnosFiltrados.length === 0 ? (
-              <div className="flex justify-center items-center h-full text-gray-500">
-                No se encontraron alumnos
-              </div>
-            ) : (
-              <ul className="divide-y">
-                {alumnosFiltrados.map(alumno => (
-                  <li 
-                    key={alumno.id} 
-                    className={`p-3 cursor-pointer hover:bg-gray-50 ${
-                      alumnoSeleccionado?.id === alumno.id ? 'bg-blue-50' : ''
-                    }`}
-                    onClick={() => setAlumnoSeleccionado(alumno)}
-                  >
-                    <div className="font-medium">{alumno.nombre}</div>
-                    <div className="text-sm text-gray-500">{alumno.email}</div>
-                    <div className="text-xs text-gray-400">Grupo: {alumno.grupo}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {alumnoSeleccionado && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <div className="font-medium">Alumno seleccionado:</div>
-              <div>{alumnoSeleccionado.nombre}</div>
-              <div className="text-sm text-gray-500">Grupo: {alumnoSeleccionado.grupo}</div>
-              <button 
-                className="mt-2 text-sm text-red-600 hover:text-red-800"
-                onClick={() => setAlumnoSeleccionado(null)}
-              >
-                Cancelar selección
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Botón para asignar */}
-      <div className="flex justify-center mb-8">
-        <button
-          className="flex items-center gap-2 bg-[#282424] text-white px-6 py-3 rounded-lg shadow hover:bg-[#3b3939] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={asignarPadreAlumno}
-          disabled={!padreSeleccionado || !alumnoSeleccionado}
-        >
-          <HiPlus />
-          <span>Asignar Padre a Alumno</span>
-        </button>
-      </div>
-
-      {/* Lista de asignaciones */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Asignaciones Actuales</h2>
-        
-        {loading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-          </div>
-        ) : asignaciones.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No hay asignaciones de padres a alumnos
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Padre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumno</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {asignaciones.map(asignacion => (
-                  <tr key={asignacion.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">{asignacion.nombrePadre}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{asignacion.nombreAlumno}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        className="text-red-600 hover:text-red-900"
-                        onClick={() => eliminarAsignacion(asignacion.id)}
-                      >
-                        <HiTrash className="h-5 w-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {mensaje.texto}
           </div>
         )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Selección de Padre */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl border border-gray-100 dark:border-gray-700">
+            <div className="bg-gradient-to-r from-indigo-500 to-indigo-700 p-4 flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <RiParentLine className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Seleccionar Padre</h2>
+            </div>
+            
+            <div className="p-6">
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar padre por nombre o email"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg pl-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-all duration-200"
+                  value={busquedaPadre}
+                  onChange={(e) => setBusquedaPadre(e.target.value)}
+                />
+                <HiMagnifyingGlass className="absolute left-3 top-3.5 text-gray-400" />
+              </div>
+
+              <div className="h-64 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : padresFiltrados.length === 0 ? (
+                  <div className="flex justify-center items-center h-full text-gray-500 dark:text-gray-400">
+                    No se encontraron padres
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {padresFiltrados.map(padre => (
+                      <li 
+                        key={padre.id} 
+                        className={`p-3 cursor-pointer transition-colors duration-150 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 ${padreSeleccionado?.id === padre.id ? 'bg-indigo-100 dark:bg-indigo-800/30' : ''}`}
+                        onClick={() => setPadreSeleccionado(padre)}
+                      >
+                        <div className="font-medium dark:text-white">{padre.nombre}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{padre.email}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {padreSeleccionado && (
+                <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                  <div className="font-medium text-indigo-800 dark:text-indigo-200">Padre seleccionado:</div>
+                  <div className="dark:text-white">{padreSeleccionado.nombre}</div>
+                  <button 
+                    className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                    onClick={() => setPadreSeleccionado(null)}
+                  >
+                    Cancelar selección
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Selección de Alumno */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl border border-gray-100 dark:border-gray-700">
+            <div className="bg-gradient-to-r from-purple-500 to-purple-700 p-4 flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <FaUserGraduate className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Seleccionar Alumno</h2>
+            </div>
+            
+            <div className="p-6">
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar alumno por nombre, email o grupo"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg pl-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white transition-all duration-200"
+                  value={busquedaAlumno}
+                  onChange={(e) => setBusquedaAlumno(e.target.value)}
+                />
+                <HiMagnifyingGlass className="absolute left-3 top-3.5 text-gray-400" />
+              </div>
+
+              <div className="h-64 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
+                  </div>
+                ) : alumnosFiltrados.length === 0 ? (
+                  <div className="flex justify-center items-center h-full text-gray-500 dark:text-gray-400">
+                    No se encontraron alumnos
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {alumnosFiltrados.map(alumno => (
+                      <li 
+                        key={alumno.id} 
+                        className={`p-3 cursor-pointer transition-colors duration-150 hover:bg-purple-50 dark:hover:bg-purple-900/20 ${alumnoSeleccionado?.id === alumno.id ? 'bg-purple-100 dark:bg-purple-800/30' : ''}`}
+                        onClick={() => setAlumnoSeleccionado(alumno)}
+                      >
+                        <div className="font-medium dark:text-white">{alumno.nombre}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{alumno.email}</div>
+                        <div className="text-xs mt-1">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            {alumno.grupo}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {alumnoSeleccionado && (
+                <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <div className="font-medium text-purple-800 dark:text-purple-200">Alumno seleccionado:</div>
+                  <div className="dark:text-white">{alumnoSeleccionado.nombre}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                      {alumnoSeleccionado.grupo}
+                    </span>
+                  </div>
+                  <button 
+                    className="mt-2 text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+                    onClick={() => setAlumnoSeleccionado(null)}
+                  >
+                    Cancelar selección
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Botón para asignar con efecto de gradiente */}
+        <div className="flex justify-center mb-8">
+          <button
+            className={`flex items-center gap-2 px-8 py-4 rounded-xl shadow-lg transition-all duration-300 ${!padreSeleccionado || !alumnoSeleccionado 
+              ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transform hover:scale-105 hover:shadow-xl'}`}
+            onClick={asignarPadreAlumno}
+            disabled={!padreSeleccionado || !alumnoSeleccionado}
+          >
+            <HiPlus className="h-5 w-5" />
+            <span className="font-medium">Asignar Padre a Alumno</span>
+          </button>
+        </div>
+
+        {/* Lista de asignaciones */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
+            <h2 className="text-lg font-semibold text-white">Asignaciones Actuales</h2>
+          </div>
+          
+          <div className="p-6">
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : asignaciones.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="mt-4 text-lg font-medium">No hay asignaciones de padres a alumnos</p>
+                <p className="mt-2">Las asignaciones que crees aparecerán aquí</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50">Padre</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50">Alumno</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {asignaciones.map(asignacion => (
+                      <tr key={asignacion.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center">
+                              <RiParentLine className="h-4 w-4" />
+                            </div>
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">{asignacion.nombrePadre}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center">
+                              <FaUserGraduate className="h-4 w-4" />
+                            </div>
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">{asignacion.nombreAlumno}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button
+                            className="inline-flex items-center justify-center p-2 rounded-full text-red-600 hover:text-white hover:bg-red-600 transition-colors duration-200"
+                            onClick={() => eliminarAsignacion(asignacion.id)}
+                            title="Eliminar asignación"
+                          >
+                            <HiTrash className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Layout>
   )

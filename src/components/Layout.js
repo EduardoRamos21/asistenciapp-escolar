@@ -1,15 +1,15 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { HiOutlineClipboardCheck, HiOutlineClipboardList } from 'react-icons/hi'
-import { FiUser, FiHelpCircle, FiLogOut } from 'react-icons/fi'
+import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
 import { FaChalkboardTeacher, FaUsers, FaHome } from 'react-icons/fa'
 import { supabase } from '@/lib/supabase'
 
 export default function Layout({ children }) {
   const router = useRouter()
   const [rol, setRol] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -41,35 +41,64 @@ export default function Layout({ children }) {
     fetchRol()
   }, [router])
 
-  if (!rol) return <div className="p-6">Cargando...</div>
+  if (!rol) return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="w-16 h-16 bg-blue-500/20 rounded-full mb-4 flex items-center justify-center">
+          <div className="w-10 h-10 bg-blue-500/40 rounded-full"></div>
+        </div>
+        <div className="text-blue-600 dark:text-blue-400 font-medium">Cargando...</div>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="flex min-h-screen bg-gray-100 text-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
+      {/* Botón de menú móvil */}
+      <div className="md:hidden fixed top-4 left-4 z-50">
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md text-indigo-600 dark:text-indigo-400"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+          </svg>
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <aside className="w-64 bg-[#282424] text-white flex flex-col justify-between p-6">
+      <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static top-0 left-0 z-40 h-full w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-300 ease-in-out`}>
         <div>
-          <div className="flex flex-col items-center mb-10">
-            <Image src="/logo.png" alt="Logo" width={100} height={100} className="mb-3" />
-            <h1 className="text-xl font-bold">AsistenciAPP</h1>
+          <div className="flex flex-col items-center py-6 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+            {/* Logo animado */}
+            <div className="relative w-20 h-20 mb-3 flex items-center justify-center">
+              <div className="absolute w-full h-full rounded-full bg-white/10 animate-[ping_3s_infinite] opacity-75"></div>
+              <div className="absolute w-[85%] h-[85%] rounded-full bg-white/20"></div>
+              <div className="absolute w-[70%] h-[70%] rounded-full bg-white/30"></div>
+              <div className="absolute w-[55%] h-[55%] rounded-full bg-white/40 flex items-center justify-center">
+                <FiPlus className="text-white text-2xl" />
+              </div>
+            </div>
+            <h1 className="text-xl font-bold tracking-wide">AsistenciAPP</h1>
           </div>
 
-          <nav className="flex flex-col space-y-4 text-sm">
+          <nav className="flex flex-col p-4 space-y-1 text-sm">
             {rol === 'maestro' && (
               <>
                 <Link href="/maestro/asistencia" className={navStyle(router, '/maestro/asistencia')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <HiOutlineClipboardCheck className="text-xl" />
                     <span>Asistencias</span>
                   </span>
                 </Link>
                 <Link href="/maestro/tareas" className={navStyle(router, '/maestro/tareas')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <HiOutlineClipboardList className="text-xl" />
                     <span>Tareas</span>
                   </span>
                 </Link>
                 <Link href="/maestro/cuenta" className={navStyle(router, '/maestro/cuenta')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <FiUser className="text-xl" />
                     <span>Cuenta</span>
                   </span>
@@ -80,19 +109,19 @@ export default function Layout({ children }) {
             {rol === 'padre' && (
               <>
                 <Link href="/padre" className={navStyle(router, '/padre')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <FaHome className="text-xl" />
                     <span>Inicio</span>
                   </span>
                 </Link>
                 <Link href="/padre/hijo/1/asistencia" className={navStyle(router, '/padre/hijo')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <HiOutlineClipboardCheck className="text-xl" />
                     <span>Asistencia hijo</span>
                   </span>
                 </Link>
                 <Link href="/padre/hijo/1/tareas" className={navStyle(router, '/padre/hijo')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <HiOutlineClipboardList className="text-xl" />
                     <span>Tareas hijo</span>
                   </span>
@@ -103,21 +132,27 @@ export default function Layout({ children }) {
             {rol === 'director' && (
               <>
                 <Link href="/director" className={navStyle(router, '/director')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <FaHome className="text-xl" />
                     <span>Dashboard</span>
                   </span>
                 </Link>
                 <Link href="/director/maestros" className={navStyle(router, '/director/maestros')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <FaChalkboardTeacher className="text-xl" />
                     <span>Maestros</span>
                   </span>
                 </Link>
                 <Link href="/director/grupos" className={navStyle(router, '/director/grupos')}>
-                  <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
                     <FaUsers className="text-xl" />
                     <span>Grupos</span>
+                  </span>
+                </Link>
+                <Link href="/director/cuenta" className={navStyle(router, '/director/cuenta')}>
+                  <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
+                    <FiUser className="text-xl" />
+                    <span>Cuenta</span>
                   </span>
                 </Link>
               </>
@@ -125,34 +160,42 @@ export default function Layout({ children }) {
           </nav>
         </div>
 
-        <div className="flex flex-col space-y-2 text-sm">
-          <Link href="/ayuda" className="hover:text-purple-400 transition-colors">
-            <span className="flex items-center gap-3">
-              <FiHelpCircle className="text-xl" />
-              <span>Ayuda</span>
-            </span>
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-1 text-sm">
+          <Link href="/ayuda" className="flex items-center gap-3 p-3 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out">
+            <FiHelpCircle className="text-xl" />
+            <span>Ayuda</span>
           </Link>
           <button
             onClick={handleLogout}
-            className="text-left hover:text-red-400 transition-colors"
+            className="w-full flex items-center gap-3 p-3 rounded-lg text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-500 dark:hover:text-red-400 transition-all duration-200 ease-in-out"
           >
-            <span className="flex items-center gap-3">
-              <FiLogOut className="text-xl" />
-              <span>Cerrar sesión</span>
-            </span>
+            <FiLogOut className="text-xl" />
+            <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
 
+      {/* Overlay para cerrar el sidebar en móvil */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Contenido principal */}
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-4 md:p-6 overflow-auto animate-fade-in pt-16 md:pt-6 w-full h-full flex flex-col">
+        <div className="flex-1 w-full h-full">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }
 
 function navStyle(router, path) {
   const isActive = router.pathname === path || router.pathname.startsWith(`${path}/`)
-  return `hover:text-purple-400 transition-colors ${
-    isActive ? 'text-purple-500 font-semibold' : 'text-white'
-  }`
+  return isActive 
+    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
+    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'
 }

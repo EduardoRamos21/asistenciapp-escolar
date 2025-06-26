@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import useEstadisticas from '@/hooks/useEstadisticas';
+import { FaChalkboardTeacher, FaUserGraduate, FaBookOpen, FaUserFriends } from 'react-icons/fa';
+import { HiUserGroup } from 'react-icons/hi';
+import { MdAssignment } from 'react-icons/md';
+import { RiParentLine } from 'react-icons/ri';
 
 export default function DirectorDashboard() {
   const { estadisticas, loading, error } = useEstadisticas();
@@ -35,68 +39,93 @@ export default function DirectorDashboard() {
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">{fecha}</h2>
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">{fecha}</h2>
         {usuario && (
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="font-semibold">{usuario.nombre}</p>
-              <p className="text-sm text-gray-500">Director</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-100">{usuario.nombre}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Director</p>
             </div>
-            <Image 
-              src={usuario.img || "/perfil.jpg"} 
-              alt="perfil" 
-              width={40} 
-              height={40} 
-              className="rounded-full" 
-            />
+            <div className="relative w-12 h-12 overflow-hidden rounded-full ring-2 ring-blue-500 dark:ring-blue-400">
+              <Image 
+                src={usuario.img || "/perfil.jpg"} 
+                alt="perfil" 
+                width={48} 
+                height={48} 
+                className="object-cover" 
+              />
+            </div>
           </div>
         )}
       </div>
 
       {/* Tarjetas resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card color="bg-cyan-600" title="Maestros" valor={loading ? '...' : estadisticas.totalMaestros} />
-        <Card color="bg-yellow-400" title="Alumnos" valor={loading ? '...' : estadisticas.totalAlumnos} />
-        <Card color="bg-green-500" title="Asistencia del día" valor={loading ? '...' : `${estadisticas.asistenciaDia}%`} />
-        <Card color="bg-blue-500" title="Asistencia semanal" valor={loading ? '...' : `${estadisticas.asistenciaSemana}%`} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <Card 
+          color="from-blue-500 to-blue-600" 
+          title="Maestros" 
+          valor={loading ? '...' : estadisticas.totalMaestros} 
+          icon={<FaChalkboardTeacher className="text-3xl" />}
+        />
+        <Card 
+          color="from-amber-400 to-amber-500" 
+          title="Alumnos" 
+          valor={loading ? '...' : estadisticas.totalAlumnos} 
+          icon={<FaUserGraduate className="text-3xl" />}
+        />
+        <Card 
+          color="from-emerald-500 to-emerald-600" 
+          title="Asistencia del día" 
+          valor={loading ? '...' : `${estadisticas.asistenciaDia}%`} 
+          icon={<MdAssignment className="text-3xl" />}
+        />
+        <Card 
+          color="from-indigo-500 to-indigo-600" 
+          title="Asistencia semanal" 
+          valor={loading ? '...' : `${estadisticas.asistenciaSemana}%`} 
+          icon={<MdAssignment className="text-3xl" />}
+        />
       </div>
 
-   
-
       {/* Botones de acción con navegación */}
-      <div className="flex flex-wrap gap-4">
-        <Link href="/director/maestros">
-          <ActionButton text="Ver maestros" icon="👨‍🏫" />
+      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Acciones rápidas</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/director/maestros" className="w-full">
+          <ActionButton text="Ver maestros" icon={<FaChalkboardTeacher />} />
         </Link>
-        <Link href="/director/grupos">
-          <ActionButton text="Ver grupos" icon="👥" />
+        <Link href="/director/grupos" className="w-full">
+          <ActionButton text="Ver grupos" icon={<HiUserGroup />} />
         </Link> 
-        <Link href="/director/grupos">
-          <ActionButton text="Gestionar materias" icon="📘" />
+        <Link href="/director/grupos" className="w-full">
+          <ActionButton text="Gestionar materias" icon={<FaBookOpen />} />
         </Link>
-        <Link href="/director/asignar-padre">
-          <ActionButton text="Asignar padres" icon="👨‍👩‍👧‍👦" />
+        <Link href="/director/asignar-padre" className="w-full">
+          <ActionButton text="Asignar padres" icon={<RiParentLine />} />
         </Link>
       </div>
     </Layout>
   );
 }
 
-function Card({ color, title, valor }) {
+function Card({ color, title, valor, icon }) {
   return (
-    <div className={`${color} text-white rounded-xl shadow-md p-6 text-center`}>
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+    <div className={`bg-gradient-to-r ${color} text-white rounded-xl shadow-lg p-6 transition-transform hover:scale-105 overflow-hidden relative`}>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <div className="opacity-80">{icon}</div>
+      </div>
       <p className="text-3xl font-bold">{valor}</p>
+      <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-white/10"></div>
     </div>
   );
 }
 
 function ActionButton({ text, icon }) {
   return (
-    <div className="flex items-center gap-2 bg-[#282424] text-white px-5 py-3 rounded-lg shadow hover:bg-[#3b3939] transition cursor-pointer">
-      <span>{icon}</span>
-      <span>{text}</span>
+    <div className="flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-5 py-4 rounded-xl shadow-md hover:shadow-lg border border-gray-100 dark:border-gray-700 transition-all duration-200 cursor-pointer w-full h-full hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 group">
+      <div className="text-blue-500 dark:text-blue-400 text-xl group-hover:scale-110 transition-transform">{icon}</div>
+      <span className="font-medium">{text}</span>
     </div>
   );
 }

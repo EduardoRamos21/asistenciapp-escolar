@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 
@@ -12,6 +11,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // ... existing code ...
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Por favor, completa todos los campos');
@@ -146,97 +146,193 @@ export default function AuthPage() {
     }
   }
   
-  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#282424] to-gray-900">
-      <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-5xl p-6">
-        {/* Logo */}
-        <div className="flex-1 flex flex-col items-center text-white mb-8 md:mb-0 transition-all duration-500">
-          <Image src="/logo.png" alt="Logo" width={120} height={120} className="mb-4" />
-          <h1 className="text-3xl font-bold">AsistenciAPP</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-800 dark:to-slate-900">
+      <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-6xl p-6 gap-8">
+        {/* Nuevo elemento visual en lugar del logo */}
+        <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left mb-8 md:mb-0 transition-all duration-500 max-w-md">
+          <div className="relative w-32 h-32 mb-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20 animate-pulse"></div>
+            <div className="absolute inset-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full opacity-40"></div>
+            <div className="absolute inset-4 bg-gradient-to-br from-blue-700 to-indigo-800 rounded-full opacity-60"></div>
+            <div className="absolute inset-6 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-full opacity-80 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">AsistenciAPP</h1>
+          <div className="hidden md:block">
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-300" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span className="text-slate-700 dark:text-slate-200">Control de asistencias en tiempo real</span>
+            </div>
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-300" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span className="text-slate-700 dark:text-slate-200">Comunicación entre padres y maestros</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-300" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span className="text-slate-700 dark:text-slate-200">Reportes y estadísticas detalladas</span>
+            </div>
+          </div>
         </div>
 
         {/* Formulario */}
-        <div className="flex-1 bg-white p-8 rounded-xl shadow-xl max-w-md w-full relative overflow-hidden">
+        <div className="flex-1 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full relative overflow-hidden border border-slate-200 dark:border-slate-700">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
           <div className="transition-all duration-700 ease-in-out">
             {modo === 'login' ? (
               <div key="login" className="animate-fade-in">
-                <h2 className="text-xl font-bold mb-6 text-black">INICIA SESIÓN</h2>
-                <input
-                  type="email"
-                  placeholder="Correo"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="border border-black w-full p-2 mb-4 rounded"
-                />
-                <input
-                  type="password"
-                  placeholder="Contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="border border-black w-full p-2 mb-6 rounded"
-                />
+                <h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Iniciar Sesión
+                </h2>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo electrónico</label>
+                  <input
+                    type="email"
+                    placeholder="ejemplo@correo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors duration-200"
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contraseña</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors duration-200"
+                  />
+                </div>
                 <button
                   onClick={handleLogin}
                   disabled={loading}
-                  className="bg-[#282424] text-white w-full py-2 font-semibold rounded hover:bg-[#1f1c1c] disabled:opacity-70"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex justify-center items-center"
                 >
-                  {loading ? 'CARGANDO...' : 'INICIAR SESIÓN'}
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Cargando...
+                    </>
+                  ) : 'Iniciar Sesión'}
                 </button>
-                {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
-                <p className="text-xs text-center mt-6 text-gray-600">
-                  Al iniciar sesión, aceptas los <br />
-                  Términos y Políticas de la plataforma.
-                </p>
-                <p className="text-sm text-center mt-4">
-                  ¿No tienes cuenta?{' '}
-                  <button onClick={() => setModo('registro')} className="text-blue-600 font-semibold hover:underline">
-                    Regístrate aquí
-                  </button>
-                </p>
+                {error && (
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-red-600 dark:text-red-400 text-sm flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {error}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <p className="text-xs text-center text-slate-500 dark:text-slate-400 mb-4">
+                    Al iniciar sesión, aceptas los Términos y Políticas de la plataforma.
+                  </p>
+                  <p className="text-sm text-center">
+                    ¿No tienes cuenta?{' '}
+                    <button onClick={() => setModo('registro')} className="text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
+                      Regístrate aquí
+                    </button>
+                  </p>
+                </div>
               </div>
             ) : (
               <div key="registro" className="animate-fade-in">
-                <h2 className="text-xl font-bold mb-6 text-black">REGÍSTRATE</h2>
-                <input
-                  type="text"
-                  placeholder="Nombre completo"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  className="border border-black w-full p-2 mb-4 rounded"
-                />
-                <input
-                  type="email"
-                  placeholder="Correo"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="border border-black w-full p-2 mb-4 rounded"
-                />
-                <input
-                  type="password"
-                  placeholder="Contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="border border-black w-full p-2 mb-6 rounded"
-                />
+                <h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Crear Cuenta
+                </h2>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre completo</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre y apellidos"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors duration-200"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo electrónico</label>
+                  <input
+                    type="email"
+                    placeholder="ejemplo@correo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors duration-200"
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contraseña</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors duration-200"
+                  />
+                </div>
                 <button
                   onClick={handleRegistro}
                   disabled={loading}
-                  className="bg-[#282424] text-white w-full py-2 font-semibold rounded hover:bg-[#1f1c1c] disabled:opacity-70"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex justify-center items-center"
                 >
-                  {loading ? 'CARGANDO...' : 'REGÍSTRATE'}
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Cargando...
+                    </>
+                  ) : 'Crear Cuenta'}
                 </button>
-                {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
-                <p className="text-xs text-center mt-6 text-gray-600">
-                  Al registrarte, aceptas los <br />
-                  Términos y Políticas de la plataforma.
-                </p>
-                <p className="text-sm text-center mt-4">
-                  ¿Ya tienes cuenta?{' '}
-                  <button onClick={() => setModo('login')} className="text-blue-600 font-semibold hover:underline">
-                    Inicia sesión
-                  </button>
-                </p>
+                {error && (
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-red-600 dark:text-red-400 text-sm flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {error}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <p className="text-xs text-center text-slate-500 dark:text-slate-400 mb-4">
+                    Al registrarte, aceptas los Términos y Políticas de la plataforma.
+                  </p>
+                  <p className="text-sm text-center">
+                    ¿Ya tienes cuenta?{' '}
+                    <button onClick={() => setModo('login')} className="text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
+                      Inicia sesión
+                    </button>
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -245,4 +341,3 @@ export default function AuthPage() {
     </div>
   );
 }
- 

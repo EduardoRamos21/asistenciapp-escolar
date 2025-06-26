@@ -1,45 +1,58 @@
 import { useState } from 'react';
+import { FiX } from 'react-icons/fi';
+import { FaUserGraduate } from 'react-icons/fa';
 
 export default function ModalAlumno({ visible, onClose, onSave, grupoId }) {
   const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!nombre.trim() || !email.trim()) {
-      setError('Todos los campos son obligatorios');
+    if (!nombre.trim()) {
+      setError('El nombre es obligatorio');
       return;
     }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('El formato del email no es válido');
-      return;
-    }
-
-    onSave({ nombre, email, grupoId });
+    // El email se generará automáticamente en el backend
+    onSave({ nombre, grupoId });
     setNombre('');
-    setEmail('');
     setError('');
   };
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Agregar Alumno</h2>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 animate-fadeIn">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-100 dark:bg-purple-900/50 p-2 rounded-lg text-purple-700 dark:text-purple-300">
+              <FaUserGraduate size={20} />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Agregar Alumno</h2>
+          </div>
+          <button 
+            onClick={() => {
+              setNombre('');
+              setError('');
+              onClose();
+            }}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+        
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg mb-6 animate-fadeIn">
             {error}
           </div>
         )}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nombre">
+        
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2" htmlFor="nombre">
               Nombre completo
             </label>
             <input
@@ -47,41 +60,27 @@ export default function ModalAlumno({ visible, onClose, onSave, grupoId }) {
               id="nombre"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200"
               placeholder="Nombre del alumno"
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="correo@ejemplo.com"
-              required
-            />
-          </div>
-          <div className="flex justify-end space-x-4">
+          
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => {
                 setNombre('');
-                setEmail('');
                 setError('');
                 onClose();
               }}
-              className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+              className="px-5 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium transition-colors duration-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium shadow-sm hover:shadow transition-all duration-200"
             >
               Guardar
             </button>
