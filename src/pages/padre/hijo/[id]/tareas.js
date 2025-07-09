@@ -1,7 +1,8 @@
 import LayoutPadre from '@/components/LayoutPadre';
 import { useRouter } from 'next/router';
 import { useRef, useEffect, useState } from 'react';
-import html2pdf from 'html2pdf.js';
+// Elimina esta importación estática
+// import html2pdf from 'html2pdf.js';
 import useTareasHijo from '@/hooks/useTareasHijo';
 import { supabase } from '@/lib/supabase';
 import { FaUser, FaChild, FaFileDownload, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaBook } from 'react-icons/fa';
@@ -38,8 +39,10 @@ export default function TareasHijo() {
   }, []);
 
   // Función para exportar a PDF
-  /*
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
+    // Importación dinámica de html2pdf solo en el cliente
+    const html2pdf = (await import('html2pdf.js')).default;
+    
     // Mostrar indicador de carga
     const loadingIndicator = document.createElement('div');
     loadingIndicator.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
@@ -194,7 +197,6 @@ export default function TareasHijo() {
       alert('Hubo un problema al preparar el PDF. Por favor intente nuevamente.');
     }
   };
-  */ 
 
   return (
     <LayoutPadre>

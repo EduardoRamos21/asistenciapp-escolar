@@ -1,0 +1,11 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/check-notifications",
+      "schedule": "0 */1 * * *"
+    }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/server" }
+  ]
+}

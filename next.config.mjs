@@ -1,3 +1,5 @@
+import withPWA from 'next-pwa';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -11,7 +13,17 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+    unoptimized: true,
   },
 };
 
-export default nextConfig;
+const pwaConfig = withPWA({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  // Añadir esta configuración para excluir firebase-messaging-sw.js
+  buildExcludes: [/firebase-messaging-sw\.js$/]
+})(nextConfig);
+
+export default pwaConfig;

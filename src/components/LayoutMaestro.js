@@ -1,16 +1,30 @@
 import Link from 'next/link'
-import Image from 'next/image' // Añade esta importación
+import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
 import { HiOutlineClipboardCheck, HiOutlineClipboardList } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
+import { FiHome, FiCalendar } from 'react-icons/fi';
+import BannerCarousel from '@/components/BannerCarousel'
+import { useNotificaciones } from '@/contexts/NotificacionesContext';
 
+// Al inicio del componente LayoutMaestro
 export default function LayoutMaestro({ children }) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [usuario, setUsuario] = useState(null)
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [usuario, setUsuario] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+  
+  // Usamos useEffect para determinar si estamos en el cliente
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  // Solo accedemos al contexto de notificaciones si estamos en el cliente
+  const notificaciones = useNotificaciones() || { inicializado: false };
+  const { inicializado } = notificaciones;
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -50,6 +64,15 @@ export default function LayoutMaestro({ children }) {
     fetchUsuario()
   }, [router, router.pathname]) // Añadir router.pathname como dependencia
 
+  // En el return, puedes mostrar un indicador de carga si las notificaciones no están inicializadas
+  if (isClient && !inicializado) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-screen min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
       {/* Botón de menú móvil */}
@@ -81,6 +104,10 @@ export default function LayoutMaestro({ children }) {
           </div>
 
           <nav className="p-4 space-y-4">
+            <Link href="/maestro" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+              <FiHome className="text-xl" />
+              <span>Dashboard</span>
+            </Link>
             <Link href="/maestro/asistencia" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro/asistencia' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
               <HiOutlineClipboardCheck className="text-xl" />
               <span>Asistencias</span>
@@ -89,24 +116,16 @@ export default function LayoutMaestro({ children }) {
               <HiOutlineClipboardList className="text-xl" />
               <span>Tareas</span>
             </Link>
+            <Link href="/maestro/historial" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro/historial' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+              <FiCalendar className="text-xl" />
+              <span>Historial</span>
+            </Link>
           </nav>
         </div>
 
         <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-1">
           <Link href="/maestro/cuenta" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro/cuenta' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
-            {usuario?.avatar_url ? (
-              <div className="relative w-6 h-6 rounded-full overflow-hidden">
-                <Image 
-                  src={usuario.avatar_url} 
-                  alt="Perfil" 
-                  fill={true}
-                  sizes="24px" 
-                  className="object-cover" 
-                />
-              </div>
-            ) : (
-              <FiUser className="text-xl" />
-            )}
+            <FiUser className="text-xl" />
             <span>Mi cuenta</span>
           </Link>
           <Link href="/ayuda" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/ayuda' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
@@ -129,11 +148,18 @@ export default function LayoutMaestro({ children }) {
       )}
 
       {/* Contenido principal */}
-      <main className="flex-1 flex flex-col w-full h-full p-4 md:p-6 overflow-auto animate-fade-in pt-16 md:pt-6">
-        <div className="flex-1 w-full h-full">
+      <main className="flex-1 flex flex-col w-full p-4 md:p-6 overflow-y-auto animate-fade-in pt-16 md:pt-6 pb-24 max-h-[calc(100vh-60px)]">
+        <div className="flex-1 w-full">
           {children}
         </div>
       </main>
+      
+      {/* Footer con anuncios */}
+      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 backdrop-blur-sm shadow-lg w-full border-t border-blue-100 dark:border-gray-700 md:ml-64">
+        <div className="md:-ml-64"> {/* Compensación para centrar en pantallas grandes */}
+          <BannerCarousel />
+        </div>
+      </footer>
     </div>
   )
 }

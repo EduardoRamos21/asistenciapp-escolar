@@ -149,7 +149,7 @@ export default function VistaMaestros() {
         ) : (
           <div className="mb-8">
             {/* Contenedor para la lista de maestros */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg">
               {maestros.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                   <div className="mb-4 text-5xl opacity-30">👨‍🏫</div>

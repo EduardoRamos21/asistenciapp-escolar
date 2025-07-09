@@ -95,7 +95,7 @@ export default function useEstadisticas() {
 
         // Calcular porcentaje de asistencia del día
         const asistenciaDia = asistenciasHoy && asistenciasHoy.length > 0
-          ? Math.round((asistenciasHoy.filter(a => a.presente).length / asistenciasHoy.length) * 100)
+          ? (asistenciasHoy.filter(a => a.presente).length / asistenciasHoy.length) * 100
           : 0;
 
         // Calcular asistencia de la semana
@@ -119,7 +119,7 @@ export default function useEstadisticas() {
 
         // Calcular porcentaje de asistencia de la semana
         const asistenciaSemana = asistenciasSemana && asistenciasSemana.length > 0
-          ? Math.round((asistenciasSemana.filter(a => a.presente).length / asistenciasSemana.length) * 100)
+          ? (asistenciasSemana.filter(a => a.presente).length / asistenciasSemana.length) * 100
           : 0;
 
         // Actualizar estadísticas

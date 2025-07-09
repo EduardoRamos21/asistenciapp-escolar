@@ -21,11 +21,11 @@ export default function Cuenta() {
   const [passwordConfirmacion, setPasswordConfirmacion] = useState('');
   const [guardandoPassword, setGuardandoPassword] = useState(false);
 
-  // Estados para manejo de foto de perfil
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(null);
-  const fileInputRef = useRef(null);
+  // Comentamos los estados para manejo de foto de perfil ya que no los usaremos
+  // const [avatarUrl, setAvatarUrl] = useState(null);
+  // const [uploading, setUploading] = useState(false);
+  // const [preview, setPreview] = useState(null);
+  // const fileInputRef = useRef(null);
 
   useEffect(() => {
     const obtenerPerfil = async () => {
@@ -58,12 +58,14 @@ export default function Cuenta() {
           email: user.email,
           nombre: userData.nombre,
           rol: userData.rol,
-          avatar_url: userData.avatar_url
+          // Ya no necesitamos el avatar_url
+          // avatar_url: userData.avatar_url
         });
 
-        if (userData.avatar_url) {
-          setAvatarUrl(userData.avatar_url);
-        }
+        // Comentamos esta parte ya que no usaremos el avatar
+        // if (userData.avatar_url) {
+        //   setAvatarUrl(userData.avatar_url);
+        // }
 
         setNombre(userData.nombre);
       } catch (error) {
@@ -144,7 +146,10 @@ export default function Cuenta() {
       });
 
       if (signInError) {
-        throw new Error('La contraseña actual es incorrecta');
+        // En lugar de lanzar un error, establecemos un mensaje de error
+        setMensajeError('La contraseña actual es incorrecta');
+        setGuardandoPassword(false);
+        return; // Importante: salimos de la función para evitar continuar con el proceso
       }
 
       // Cambiar la contraseña
@@ -152,7 +157,10 @@ export default function Cuenta() {
         password: passwordNueva
       });
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        setMensajeError(updateError.message);
+        return;
+      }
 
       // Limpiar campos y mostrar mensaje de éxito
       setPasswordActual('');
@@ -171,113 +179,15 @@ export default function Cuenta() {
     }
   };
 
+  // Comentamos las funciones relacionadas con la foto de perfil
   // Función para manejar la selección de archivo
-  const handleFileChange = (e) => {
-    if (!e.target.files || e.target.files.length === 0) {
-      return;
-    }
-    const file = e.target.files[0];
-    const fileReader = new FileReader();
-    
-    fileReader.onloadend = () => {
-      setPreview(fileReader.result);
-    };
-    
-    fileReader.readAsDataURL(file);
-  };
+  // const handleFileChange = (e) => { ... }
 
   // Función para subir la foto de perfil
-  const uploadAvatar = async () => {
-    try {
-      // Verificar si hay un archivo seleccionado o una vista previa
-      if (!fileInputRef.current?.files?.length && !preview) {
-        setMensajeError('Por favor selecciona una imagen');
-        return;
-      }
-      
-      let file;
-      
-      // Si hay un archivo seleccionado directamente, usarlo
-      if (fileInputRef.current?.files?.length) {
-        file = fileInputRef.current.files[0];
-      } 
-      // Si no hay archivo pero hay vista previa, crear un archivo desde la vista previa
-      else if (preview) {
-        try {
-          const response = await fetch(preview);
-          const blob = await response.blob();
-          file = new File([blob], "profile-image.jpg", { type: "image/jpeg" });
-        } catch (error) {
-          console.error("Error al crear archivo desde vista previa:", error);
-          setMensajeError('Error al procesar la imagen. Por favor, selecciona otra.');
-          return;
-        }
-      }
-      
-      if (!file) {
-        setMensajeError('No se pudo procesar la imagen seleccionada');
-        return;
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${usuario.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-  
-      setUploading(true);
-      setMensajeError('');
-      setMensajeExito('');
-  
-      // Subir archivo a Storage
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file);
-  
-      if (uploadError) {
-        throw uploadError;
-      }
-  
-      // Obtener URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(filePath);
-  
-      // Actualizar avatar_url en la tabla usuarios
-      const { error: updateError } = await supabase
-        .from('usuarios')
-        .update({ avatar_url: publicUrl })
-        .eq('id', usuario.id);
-  
-      if (updateError) {
-        throw updateError;
-      }
-  
-      setAvatarUrl(publicUrl);
-      setUsuario(prev => ({ ...prev, avatar_url: publicUrl }));
-      setPreview(null);
-      setMensajeExito('Foto de perfil actualizada correctamente');
-      
-      // Limpiar el input de archivo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      // Ocultar mensaje después de 3 segundos
-      setTimeout(() => setMensajeExito(''), 3000);
-    } catch (error) {
-      console.error('Error al subir imagen:', error);
-      setMensajeError(error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
+  // const uploadAvatar = async () => { ... }
 
   // Función para cancelar la subida de foto
-  const cancelUpload = () => {
-    setPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // const cancelUpload = () => { ... }
 
   return (
     <LayoutAlumno>
@@ -298,12 +208,20 @@ export default function Cuenta() {
       )}
 
       {mensajeError && (
-        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 flex items-center gap-2 animate-fade-in">
-          <FiX className="text-red-600 dark:text-red-400" />
-          {mensajeError}
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-center gap-2 animate-fade-in shadow-lg max-w-md w-full pointer-events-auto">
+          <FiX className="text-red-600 dark:text-red-400 flex-shrink-0" />
+          <div className="flex-grow">
+            {mensajeError}
+          </div>
+          <button 
+            onClick={() => setMensajeError('')} 
+            className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-300 flex-shrink-0"
+          >
+            <FiX />
+          </button>
         </div>
       )}
-
+      
       {error && (
         <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 flex items-center gap-2 animate-fade-in">
           <FiX className="text-red-600 dark:text-red-400" />
@@ -321,66 +239,12 @@ export default function Cuenta() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col md:flex-row items-center gap-6 mb-6">
               <div className="relative group">
-                {preview ? (
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-blue-200 dark:border-blue-900">
-                    <Image 
-                      src={preview} 
-                      alt="Vista previa" 
-                      fill={true}
-                      className="rounded-full object-cover" 
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={uploadAvatar} 
-                          disabled={uploading}
-                          className="p-2 bg-green-500 rounded-full text-white hover:bg-green-600 transition-colors"
-                        >
-                          <FiCheck />
-                        </button>
-                        <button 
-                          onClick={cancelUpload}
-                          className="p-2 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors"
-                        >
-                          <FiX />
-                        </button>
-                      </div>
-                    </div>
+                {/* Reemplazamos la sección de avatar con un icono estático */}
+                <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-blue-200 dark:border-blue-900">
+                  <div className="w-full h-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 text-blue-500 dark:text-blue-300">
+                    <FiUser size={48} />
                   </div>
-                ) : (
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-blue-200 dark:border-blue-900">
-                    {avatarUrl ? (
-                      <Image 
-                        src={avatarUrl} 
-                        alt="Foto de perfil" 
-                        fill={true}
-                        className="rounded-full object-cover" 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 text-blue-500 dark:text-blue-300">
-                        <FiUser size={48} />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <label htmlFor="avatar-upload" className="p-2 bg-blue-500 rounded-full text-white hover:bg-blue-600 transition-colors cursor-pointer">
-                        <FiCamera />
-                      </label>
-                      <input 
-                        id="avatar-upload" 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleFileChange} 
-                        ref={fileInputRef}
-                        className="hidden" 
-                      />
-                    </div>
-                  </div>
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-                  </div>
-                )}
+                </div>
               </div>
               <div className="text-center md:text-left">
                 {editando ? (

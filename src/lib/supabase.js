@@ -18,3 +18,27 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     }
   }
 })
+
+// Función mejorada para descargar imágenes
+export const downloadImage = async (bucket, path) => {
+  try {
+    console.log('Descargando imagen:', path);
+    
+    // Obtener la URL pública de la imagen en lugar de descargarla como blob
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(path);
+      
+    if (!publicUrl) {
+      throw new Error('No se pudo obtener la URL pública');
+    }
+    
+    console.log('URL pública obtenida:', publicUrl);
+    return publicUrl;
+  } catch (err) {
+    console.error("Error al obtener URL de imagen:", err);
+    return null;
+  }
+};
+
+export { supabaseUrl };

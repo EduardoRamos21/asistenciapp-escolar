@@ -5,6 +5,7 @@ import { HiOutlineClipboardCheck, HiOutlineClipboardList } from 'react-icons/hi'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
 import { FaChalkboardTeacher, FaUsers, FaHome } from 'react-icons/fa'
 import { supabase } from '@/lib/supabase'
+import BannerCarousel from '@/components/BannerCarousel'
 
 export default function Layout({ children }) {
   const router = useRouter()
@@ -184,11 +185,18 @@ export default function Layout({ children }) {
       )}
 
       {/* Contenido principal */}
-      <main className="flex-1 p-4 md:p-6 overflow-auto animate-fade-in pt-16 md:pt-6 w-full h-full flex flex-col">
-        <div className="flex-1 w-full h-full">
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto animate-fade-in pt-16 md:pt-6 w-full max-h-[calc(100vh-60px)] flex flex-col pb-24">
+        <div className="flex-1 w-full">
           {children}
         </div>
       </main>
+      
+      {/* Footer con anuncios */}
+      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 backdrop-blur-sm shadow-lg w-full border-t border-blue-100 dark:border-gray-700 md:ml-64">
+        <div className="md:-ml-64"> {/* Compensación para centrar en pantallas grandes */}
+          <BannerCarousel />
+        </div>
+      </footer>
     </div>
   )
 }

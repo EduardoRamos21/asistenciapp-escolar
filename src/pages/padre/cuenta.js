@@ -1,7 +1,7 @@
 import LayoutPadre from '@/components/LayoutPadre';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { FaUser, FaEnvelope, FaEdit, FaSave, FaTimes, FaCalendarAlt, FaUserTie, FaWhatsapp, FaPhone } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaEdit, FaSave, FaTimes, FaCalendarAlt, FaUserTie, FaWhatsapp, FaPhone, FaLock } from 'react-icons/fa';
 
 export default function CuentaPadre() {
   const [usuario, setUsuario] = useState(null);
@@ -15,6 +15,11 @@ export default function CuentaPadre() {
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
   const [hijos, setHijos] = useState([]);
+  const [cambiandoPassword, setCambiandoPassword] = useState(false);
+  const [passwordActual, setPasswordActual] = useState('');
+  const [passwordNueva, setPasswordNueva] = useState('');
+  const [passwordConfirmacion, setPasswordConfirmacion] = useState('');
+  const [guardandoPassword, setGuardandoPassword] = useState(false);
 
   useEffect(() => {
     const obtenerPerfil = async () => {
@@ -148,6 +153,74 @@ export default function CuentaPadre() {
     }
   };
 
+  const handleCambiarPassword = async () => {
+    // Validaciones
+    if (!passwordActual) {
+      setMensajeError('La contraseña actual es obligatoria');
+      return;
+    }
+    
+    if (!passwordNueva) {
+      setMensajeError('La nueva contraseña es obligatoria');
+      return;
+    }
+    
+    if (passwordNueva !== passwordConfirmacion) {
+      setMensajeError('Las contraseñas no coinciden');
+      return;
+    }
+    
+    if (passwordNueva.length < 6) {
+      setMensajeError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setGuardandoPassword(true);
+    setMensajeError('');
+    setMensajeExito('');
+
+    try {
+      // Primero verificamos la contraseña actual iniciando sesión
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: usuario.email,
+        password: passwordActual,
+      });
+
+      if (signInError) {
+        // En lugar de lanzar un error, establecemos el mensaje de error y salimos
+        setMensajeError('La contraseña actual es incorrecta');
+        // Hacer que el mensaje desaparezca después de 5 segundos
+        setTimeout(() => setMensajeError(''), 5000);
+        setGuardandoPassword(false);
+        // NO cambiamos el estado de cambiandoPassword, lo mantenemos como true
+        return;
+      }
+
+      // Cambiar la contraseña
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordNueva
+      });
+
+      if (updateError) throw updateError;
+
+      // Limpiar campos y mostrar mensaje de éxito
+      setPasswordActual('');
+      setPasswordNueva('');
+      setPasswordConfirmacion('');
+      setCambiandoPassword(false); // Solo aquí cambiamos a false cuando todo es exitoso
+      setMensajeExito('Contraseña actualizada correctamente');
+      
+      // Ocultar mensaje después de 3 segundos
+      setTimeout(() => setMensajeExito(''), 3000);
+    } catch (error) {
+      console.error('Error al cambiar contraseña:', error);
+      setMensajeError(error.message);
+      // NO cambiamos el estado de cambiandoPassword, lo mantenemos como true
+    } finally {
+      setGuardandoPassword(false);
+    }
+  };
+
   return (
     <LayoutPadre>
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -172,13 +245,20 @@ export default function CuentaPadre() {
         )}
 
         {mensajeError && (
-          <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded-lg mb-6 shadow-sm">
-            <p className="flex items-center">
-              <span className="mr-2">✕</span> {mensajeError}
-            </p>
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded-lg shadow-lg max-w-md w-full pointer-events-auto">
+            <div className="flex items-center">
+              <span className="mr-2">✕</span>
+              <div className="flex-grow">{mensajeError}</div>
+              <button 
+                onClick={() => setMensajeError('')} 
+                className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-300 flex-shrink-0"
+              >
+                <span>✕</span>
+              </button>
+            </div>
           </div>
         )}
-
+        
         {error && (
           <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded-lg mb-6 shadow-sm">
             <p className="flex items-center">
@@ -315,6 +395,88 @@ export default function CuentaPadre() {
               </div>
             )}
 
+            {/* Sección de cambio de contraseña */}
+            <div className="mb-6 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
+              <h4 className="text-lg font-semibold mb-3 flex items-center">
+                <FaLock className="mr-2 text-indigo-500" /> Cambiar contraseña
+              </h4>
+              
+              {cambiandoPassword ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Contraseña actual</label>
+                    <input
+                      type="password"
+                      value={passwordActual}
+                      onChange={(e) => setPasswordActual(e.target.value)}
+                      className="border border-gray-300 dark:border-gray-600 p-2 rounded-lg w-full bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all duration-200 dark:text-white"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Nueva contraseña</label>
+                    <input
+                      type="password"
+                      value={passwordNueva}
+                      onChange={(e) => setPasswordNueva(e.target.value)}
+                      className="border border-gray-300 dark:border-gray-600 p-2 rounded-lg w-full bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all duration-200 dark:text-white"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Confirmar nueva contraseña</label>
+                    <input
+                      type="password"
+                      value={passwordConfirmacion}
+                      onChange={(e) => setPasswordConfirmacion(e.target.value)}
+                      className="border border-gray-300 dark:border-gray-600 p-2 rounded-lg w-full bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all duration-200 dark:text-white"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
+                    <button
+                      onClick={() => {
+                        setCambiandoPassword(false);
+                        setPasswordActual('');
+                        setPasswordNueva('');
+                        setPasswordConfirmacion('');
+                      }}
+                      className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center justify-center mb-2 sm:mb-0"
+                    >
+                      <FaTimes className="mr-2" /> Cancelar
+                    </button>
+                    <button
+                      onClick={handleCambiarPassword}
+                      disabled={guardandoPassword}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {guardandoPassword ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                          Cambiando...
+                        </>
+                      ) : (
+                        <>
+                          <FaLock className="mr-2" /> Cambiar contraseña
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Puedes cambiar tu contraseña en cualquier momento.
+                  </p>
+                  <button
+                    onClick={() => setCambiandoPassword(true)}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 flex items-center whitespace-nowrap"
+                  >
+                    <FaLock className="mr-2" /> Cambiar contraseña
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end">
               {editando ? (
                 <div className="flex gap-2">

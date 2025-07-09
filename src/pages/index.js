@@ -11,7 +11,6 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ... existing code ...
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Por favor, completa todos los campos');
@@ -66,6 +65,7 @@ export default function AuthPage() {
       else if (usuario.rol === 'padre') router.push('/padre');
       else if (usuario.rol === 'director') router.push('/director');
       else if (usuario.rol === 'alumno') router.push('/alumno');
+      else if (usuario.rol === 'admin_sistema') router.push('/admin');
       else throw new Error('Rol no reconocido.');
     } catch (error) {
       setError(error.message);

@@ -1,12 +1,10 @@
 import LayoutMaestro from '@/components/LayoutMaestro';
-import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { FiUser, FiCamera, FiEdit, FiSave, FiX, FiCheck, FiLock } from 'react-icons/fi';
+import { FiUser, FiEdit, FiSave, FiX, FiCheck, FiLock } from 'react-icons/fi';
 
-export default function Cuenta() {
+export default function CuentaMaestro() {
   const [usuario, setUsuario] = useState(null);
-  const [maestro, setMaestro] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editando, setEditando] = useState(false);
@@ -14,6 +12,7 @@ export default function Cuenta() {
   const [guardando, setGuardando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
+  const [maestro, setMaestro] = useState(null);
   
   // Estados para cambio de contraseña
   const [cambiandoPassword, setCambiandoPassword] = useState(false);
@@ -22,11 +21,12 @@ export default function Cuenta() {
   const [passwordConfirmacion, setPasswordConfirmacion] = useState('');
   const [guardandoPassword, setGuardandoPassword] = useState(false);
 
-  // Estados para manejo de foto de perfil
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(null);
-  const fileInputRef = useRef(null);
+  // Eliminamos los estados relacionados con la foto de perfil
+  // const [avatarUrl, setAvatarUrl] = useState(null);
+  // const [uploading, setUploading] = useState(false);
+  // const [preview, setPreview] = useState(null);
+  // const [selectedFile, setSelectedFile] = useState(null);
+  // const fileInputRef = useRef(null);
 
   useEffect(() => {
     const obtenerPerfil = async () => {
@@ -43,32 +43,34 @@ export default function Cuenta() {
         // Obtener datos del usuario
         const { data: userData, error: userDataError } = await supabase
           .from('usuarios')
-          .select('id, nombre, rol, avatar_url')
+          .select('id, nombre, rol')
           .eq('id', user.id)
           .single();
 
         if (userDataError) throw userDataError;
 
-        // Obtener datos del maestro
+        // Verificar que el usuario es maestro
+        if (userData.rol !== 'maestro') {
+          throw new Error('No tienes permiso para acceder a esta página');
+        }
+
+        // Obtener datos específicos del maestro
         const { data: maestroData, error: maestroError } = await supabase
           .from('maestros')
-          .select('id, especialidad')
+          .select('*')
           .eq('usuario_id', user.id)
           .single();
 
-        if (maestroError && maestroError.code !== 'PGRST116') throw maestroError;
+        if (maestroError && maestroError.code !== 'PGRST116') {
+          console.error('Error al cargar datos de maestro:', maestroError);
+        }
 
         setUsuario({
           id: user.id,
           email: user.email,
           nombre: userData.nombre,
-          rol: userData.rol,
-          avatar_url: userData.avatar_url
+          rol: userData.rol
         });
-
-        if (userData.avatar_url) {
-          setAvatarUrl(userData.avatar_url);
-        }
 
         if (maestroData) {
           setMaestro(maestroData);
@@ -153,7 +155,13 @@ export default function Cuenta() {
       });
 
       if (signInError) {
-        throw new Error('La contraseña actual es incorrecta');
+        // En lugar de lanzar un error, establecemos el mensaje de error y salimos
+        setMensajeError('La contraseña actual es incorrecta');
+        // Hacer que el mensaje desaparezca después de 5 segundos
+        setTimeout(() => setMensajeError(''), 5000);
+        setGuardandoPassword(false);
+        // NO cambiamos el estado de cambiandoPassword, lo mantenemos como true
+        return;
       }
 
       // Cambiar la contraseña
@@ -167,7 +175,7 @@ export default function Cuenta() {
       setPasswordActual('');
       setPasswordNueva('');
       setPasswordConfirmacion('');
-      setCambiandoPassword(false);
+      setCambiandoPassword(false); // Solo aquí cambiamos a false cuando todo es exitoso
       setMensajeExito('Contraseña actualizada correctamente');
       
       // Ocultar mensaje después de 3 segundos
@@ -175,123 +183,16 @@ export default function Cuenta() {
     } catch (error) {
       console.error('Error al cambiar contraseña:', error);
       setMensajeError(error.message);
+      // NO cambiamos el estado de cambiandoPassword, lo mantenemos como true
     } finally {
       setGuardandoPassword(false);
     }
   };
 
-  // Función para manejar la selección de archivo
-  const handleFileChange = (e) => {
-    if (!e.target.files || e.target.files.length === 0) {
-      return;
-    }
-    const file = e.target.files[0];
-    const fileReader = new FileReader();
-    
-    fileReader.onloadend = () => {
-      setPreview(fileReader.result);
-    };
-    
-    fileReader.readAsDataURL(file);
-  };
-
-  // Función para subir la foto de perfil
-  const uploadAvatar = async () => {
-    try {
-      // Verificar si hay un archivo seleccionado o una vista previa
-      if (!fileInputRef.current?.files?.length && !preview) {
-        setMensajeError('Por favor selecciona una imagen');
-        return;
-      }
-      
-      let file;
-      
-      // Si hay un archivo seleccionado directamente, usarlo
-      if (fileInputRef.current?.files?.length) {
-        file = fileInputRef.current.files[0];
-      } 
-      // Si no hay archivo pero hay vista previa, crear un archivo desde la vista previa
-      else if (preview) {
-        try {
-          const response = await fetch(preview);
-          const blob = await response.blob();
-          file = new File([blob], "profile-image.jpg", { type: "image/jpeg" });
-          console.log("Archivo creado desde vista previa:", file);
-        } catch (error) {
-          console.error("Error al crear archivo desde vista previa:", error);
-          setMensajeError('Error al procesar la imagen. Por favor, selecciona otra.');
-          return;
-        }
-      }
-      
-      if (!file) {
-        setMensajeError('No se pudo procesar la imagen seleccionada');
-        return;
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${usuario.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-  
-      setUploading(true);
-      setMensajeError('');
-      setMensajeExito('');
-  
-      // Subir archivo a Storage
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file);
-  
-      if (uploadError) {
-        console.error("Error al subir archivo:", uploadError);
-        throw uploadError;
-      }
-  
-      // Obtener URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(filePath);
-  
-      console.log("URL pública obtenida:", publicUrl);
-  
-      // Actualizar avatar_url en la tabla usuarios
-      const { error: updateError } = await supabase
-        .from('usuarios')
-        .update({ avatar_url: publicUrl })
-        .eq('id', usuario.id);
-  
-      if (updateError) {
-        console.error("Error al actualizar usuario:", updateError);
-        throw updateError;
-      }
-  
-      setAvatarUrl(publicUrl);
-      setUsuario(prev => ({ ...prev, avatar_url: publicUrl }));
-      setPreview(null);
-      setMensajeExito('Foto de perfil actualizada correctamente');
-      
-      // Limpiar el input de archivo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      // Ocultar mensaje después de 3 segundos
-      setTimeout(() => setMensajeExito(''), 3000);
-    } catch (error) {
-      console.error('Error al subir imagen:', error);
-      setMensajeError(error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Función para cancelar la subida de foto
-  const cancelUpload = () => {
-    setPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // Eliminamos las funciones relacionadas con la foto de perfil
+  // const handleFileChange = (e) => {...}
+  // const uploadAvatar = async () => {...}
+  // const processAndUploadFile = async (file) => {...}
 
   return (
     <LayoutMaestro>
@@ -311,13 +212,22 @@ export default function Cuenta() {
         </div>
       )}
 
+      {/* Mensaje de error flotante */}
       {mensajeError && (
-        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 flex items-center gap-2 animate-fade-in">
-          <FiX className="text-red-600 dark:text-red-400" />
-          {mensajeError}
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-center gap-2 animate-fade-in shadow-lg max-w-md w-full pointer-events-auto">
+          <FiX className="text-red-600 dark:text-red-400 flex-shrink-0" />
+          <div className="flex-grow">
+            {mensajeError}
+          </div>
+          <button 
+            onClick={() => setMensajeError('')} 
+            className="ml-auto text-red-500 hover:text-red-700 flex-shrink-0"
+          >
+            <FiX />
+          </button>
         </div>
       )}
-
+      
       {error && (
         <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 flex items-center gap-2 animate-fade-in">
           <FiX className="text-red-600 dark:text-red-400" />
@@ -335,66 +245,10 @@ export default function Cuenta() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col md:flex-row items-center gap-6 mb-6">
               <div className="relative group">
-                {preview ? (
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-blue-200 dark:border-blue-900">
-                    <Image 
-                      src={preview} 
-                      alt="Vista previa" 
-                      fill={true}
-                      className="rounded-full object-cover" 
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={uploadAvatar} 
-                          disabled={uploading}
-                          className="p-2 bg-green-500 rounded-full text-white hover:bg-green-600 transition-colors"
-                        >
-                          <FiCheck />
-                        </button>
-                        <button 
-                          onClick={cancelUpload}
-                          className="p-2 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors"
-                        >
-                          <FiX />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-blue-200 dark:border-blue-900">
-                    {avatarUrl ? (
-                      <Image 
-                        src={avatarUrl} 
-                        alt="Foto de perfil" 
-                        fill={true}
-                        className="rounded-full object-cover" 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 text-blue-500 dark:text-blue-300">
-                        <FiUser size={48} />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <label htmlFor="avatar-upload" className="p-2 bg-blue-500 rounded-full text-white hover:bg-blue-600 transition-colors cursor-pointer">
-                        <FiCamera />
-                      </label>
-                      <input 
-                        id="avatar-upload" 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleFileChange} 
-                        ref={fileInputRef}
-                        className="hidden" 
-                      />
-                    </div>
-                  </div>
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-                  </div>
-                )}
+                {/* Reemplazamos la lógica de avatar con un ícono fijo */}
+                <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center shadow-md">
+                  <FiUser className="text-white text-5xl" />
+                </div>
               </div>
               <div className="text-center md:text-left">
                 {editando ? (
@@ -541,3 +395,6 @@ export default function Cuenta() {
     </LayoutMaestro>
   );
 }
+
+
+

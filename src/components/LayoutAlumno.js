@@ -2,9 +2,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
+import { FiUser, FiHelpCircle, FiLogOut, FiPlus, FiHome } from 'react-icons/fi'
 import { HiOutlineClipboardList } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
+import BannerCarousel from '@/components/BannerCarousel'
 
 export default function LayoutAlumno({ children }) {
   const router = useRouter()
@@ -81,6 +82,10 @@ export default function LayoutAlumno({ children }) {
           </div>
 
           <nav className="p-4 space-y-4">
+            <Link href="/alumno" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/alumno' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+              <FiHome className="text-xl" />
+              <span>Dashboard</span>
+            </Link>
             <Link href="/alumno/tareas" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/alumno/tareas' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
               <HiOutlineClipboardList className="text-xl" />
               <span>Tareas</span>
@@ -90,19 +95,7 @@ export default function LayoutAlumno({ children }) {
 
         <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-1">
           <Link href="/alumno/cuenta" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/alumno/cuenta' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
-            {usuario?.avatar_url ? (
-              <div className="relative w-6 h-6 rounded-full overflow-hidden">
-                <Image 
-                  src={usuario.avatar_url} 
-                  alt="Perfil" 
-                  fill={true}
-                  sizes="24px" 
-                  className="object-cover" 
-                />
-              </div>
-            ) : (
-              <FiUser className="text-xl" />
-            )}
+            <FiUser className="text-xl" />
             <span>Mi cuenta</span>
           </Link>
           <Link href="/ayuda" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/ayuda' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
@@ -125,11 +118,18 @@ export default function LayoutAlumno({ children }) {
       )}
 
       {/* Contenido principal */}
-      <main className="flex-1 flex flex-col w-full h-full p-4 md:p-6 overflow-auto animate-fade-in pt-16 md:pt-6">
-        <div className="flex-1 w-full h-full">
+      <main className="flex-1 flex flex-col w-full max-h-[calc(100vh-60px)] p-4 md:p-6 overflow-y-auto animate-fade-in pt-16 md:pt-6 pb-24">
+        <div className="flex-1 w-full">
           {children}
         </div>
       </main>
+      
+      {/* Footer con anuncios */}
+      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 backdrop-blur-sm shadow-lg w-full border-t border-blue-100 dark:border-gray-700 md:ml-64">
+        <div className="md:-ml-64"> {/* Compensación para centrar en pantallas grandes */}
+          <BannerCarousel />
+        </div>
+      </footer>
     </div>
   )
 }

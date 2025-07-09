@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import useEstadisticas from '@/hooks/useEstadisticas';
-import { FaChalkboardTeacher, FaUserGraduate, FaBookOpen, FaUserFriends } from 'react-icons/fa';
-import { HiUserGroup } from 'react-icons/hi';
-import { MdAssignment } from 'react-icons/md';
+import { HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineUserGroup } from 'react-icons/hi';
+import { HiOutlineClipboardCheck } from 'react-icons/hi';
 import { RiParentLine } from 'react-icons/ri';
 
 export default function DirectorDashboard() {
@@ -66,25 +65,25 @@ export default function DirectorDashboard() {
           color="from-blue-500 to-blue-600" 
           title="Maestros" 
           valor={loading ? '...' : estadisticas.totalMaestros} 
-          icon={<FaChalkboardTeacher className="text-3xl" />}
+          icon={<HiOutlineAcademicCap className="text-4xl" />}
         />
         <Card 
           color="from-amber-400 to-amber-500" 
           title="Alumnos" 
           valor={loading ? '...' : estadisticas.totalAlumnos} 
-          icon={<FaUserGraduate className="text-3xl" />}
+          icon={<HiOutlineAcademicCap className="text-4xl" />}
         />
         <Card 
           color="from-emerald-500 to-emerald-600" 
           title="Asistencia del día" 
-          valor={loading ? '...' : `${estadisticas.asistenciaDia}%`} 
-          icon={<MdAssignment className="text-3xl" />}
+          valor={loading ? '...' : `${estadisticas.asistenciaDia.toFixed(6)}%`} 
+          icon={<HiOutlineClipboardCheck className="text-4xl" />}
         />
         <Card 
           color="from-indigo-500 to-indigo-600" 
           title="Asistencia semanal" 
-          valor={loading ? '...' : `${estadisticas.asistenciaSemana}%`} 
-          icon={<MdAssignment className="text-3xl" />}
+          valor={loading ? '...' : `${estadisticas.asistenciaSemana.toFixed(6)}%`} 
+          icon={<HiOutlineClipboardCheck className="text-4xl" />}
         />
       </div>
 
@@ -92,16 +91,16 @@ export default function DirectorDashboard() {
       <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Acciones rápidas</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/director/maestros" className="w-full">
-          <ActionButton text="Ver maestros" icon={<FaChalkboardTeacher />} />
+          <ActionButton text="Ver maestros" icon={<HiOutlineAcademicCap className="text-2xl" />} />
         </Link>
         <Link href="/director/grupos" className="w-full">
-          <ActionButton text="Ver grupos" icon={<HiUserGroup />} />
+          <ActionButton text="Ver grupos" icon={<HiOutlineUserGroup className="text-2xl" />} />
         </Link> 
         <Link href="/director/grupos" className="w-full">
-          <ActionButton text="Gestionar materias" icon={<FaBookOpen />} />
+          <ActionButton text="Gestionar materias" icon={<HiOutlineBookOpen className="text-2xl" />} />
         </Link>
         <Link href="/director/asignar-padre" className="w-full">
-          <ActionButton text="Asignar padres" icon={<RiParentLine />} />
+          <ActionButton text="Asignar padres" icon={<RiParentLine className="text-2xl" />} />
         </Link>
       </div>
     </Layout>
@@ -112,10 +111,10 @@ function Card({ color, title, valor, icon }) {
   return (
     <div className={`bg-gradient-to-r ${color} text-white rounded-xl shadow-lg p-6 transition-transform hover:scale-105 overflow-hidden relative`}>
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="text-xl font-semibold">{title}</h3>
         <div className="opacity-80">{icon}</div>
       </div>
-      <p className="text-3xl font-bold">{valor}</p>
+      <p className="text-4xl font-bold">{valor}</p>
       <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-white/10"></div>
     </div>
   );
@@ -124,8 +123,8 @@ function Card({ color, title, valor, icon }) {
 function ActionButton({ text, icon }) {
   return (
     <div className="flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-5 py-4 rounded-xl shadow-md hover:shadow-lg border border-gray-100 dark:border-gray-700 transition-all duration-200 cursor-pointer w-full h-full hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 group">
-      <div className="text-blue-500 dark:text-blue-400 text-xl group-hover:scale-110 transition-transform">{icon}</div>
-      <span className="font-medium">{text}</span>
+      <div className="text-blue-500 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform">{icon}</div>
+      <span className="font-medium text-lg">{text}</span>
     </div>
   );
 }
