@@ -157,31 +157,42 @@ export default function VistaMaestros() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {maestros.map((maestro, idx) => (
-                    <div key={idx} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-full opacity-70 blur-[1px]"></div>
-                          <Image 
-                            src={maestro.img || "/perfil.jpg"} 
-                            alt={maestro.nombre} 
-                            width={50} 
-                            height={50} 
-                            className="rounded-full border-2 border-white dark:border-gray-700 relative z-10 object-cover" 
-                          />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800 dark:text-white">{maestro.nombre}</p>
-                          <p className="text-sm text-indigo-600 dark:text-indigo-400">{maestro.email}</p>
-                          {maestro.materia && (
-                            <span className="inline-block mt-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 py-1 px-2 rounded-full">
-                              {maestro.materia}
-                            </span>
-                          )}
+                  {maestros.map((maestro, idx) => {
+                    // Generar un color basado en el nombre del maestro
+                    const colors = [
+                      'from-blue-500 to-indigo-500',
+                      'from-purple-500 to-pink-500',
+                      'from-green-500 to-teal-500',
+                      'from-red-500 to-orange-500',
+                      'from-yellow-500 to-amber-500',
+                      'from-cyan-500 to-sky-500'
+                    ];
+                    // Usar el índice o alguna propiedad del maestro para seleccionar un color
+                    const colorIndex = maestro.nombre.length % colors.length;
+                    const gradientColor = colors[colorIndex];
+                    
+                    return (
+                      <div key={idx} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                        <div className="flex items-center gap-4">
+                          <div className="relative w-[50px] h-[50px]">
+                            <div className={`absolute inset-0 bg-gradient-to-tr ${gradientColor} rounded-full opacity-70`}></div>
+                            <div className="absolute inset-0 flex items-center justify-center text-white z-10">
+                              <FaChalkboardTeacher size={24} />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800 dark:text-white">{maestro.nombre}</p>
+                            <p className="text-sm text-indigo-600 dark:text-indigo-400">{maestro.email}</p>
+                            {maestro.materia && (
+                              <span className="inline-block mt-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 py-1 px-2 rounded-full">
+                                {maestro.materia}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
