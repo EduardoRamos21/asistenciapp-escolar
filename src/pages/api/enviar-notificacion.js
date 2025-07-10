@@ -33,7 +33,7 @@ export default async function handler(req, res) {
           tipo: rol || 'todos',
           leida: false,
           fecha_creacion: new Date().toISOString(),
-          enviada_push: false
+          enviada_push: true  // Cambiado de false a true
         }
       ])
       .select()
@@ -196,7 +196,7 @@ export default async function handler(req, res) {
     await supabaseAdmin
       .from('notificaciones')
       .update({ 
-        enviada_push: resultado.successCount > 0, // Marcar como enviada si al menos un token fue exitoso
+        enviada_push: true, // Cambiar esto para marcar siempre como enviada
         tokens_enviados: tokensList.length,
         tokens_exitosos: resultado.successCount || 0,
         tokens_fallidos: resultado.failureCount || 0,

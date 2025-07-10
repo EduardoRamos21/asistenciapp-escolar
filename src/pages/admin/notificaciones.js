@@ -234,6 +234,18 @@ export default function GestionNotificaciones() {
     if (!confirm('¿Estás seguro de que deseas eliminar esta notificación?')) return;
 
     try {
+      // Primero eliminar los registros relacionados en notificaciones_usuarios
+      const { error: errorRelaciones } = await supabase
+        .from('notificaciones_usuarios')
+        .delete()
+        .eq('notificacion_id', id);
+
+      if (errorRelaciones) {
+        console.error('Error al eliminar relaciones de notificación:', errorRelaciones);
+        throw errorRelaciones;
+      }
+
+      // Luego eliminar la notificación
       const { error } = await supabase
         .from('notificaciones')
         .delete()
