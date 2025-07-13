@@ -110,15 +110,7 @@ export default function TareasAlumno() {
         <h2 className="text-xl font-semibold">
           {new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
         </h2>
-        {usuario && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-semibold">{usuario.nombre}</p>
-              <p className="text-sm text-gray-500">Alumno</p>
-            </div>
-            <Image src="/perfil.jpg" alt="perfil" width={40} height={40} className="rounded-full" />
-          </div>
-        )}
+        {/* Se eliminó la información del usuario que aparecía aquí */}
       </div>
 
       <div className="flex items-center justify-between mb-4">

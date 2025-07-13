@@ -186,7 +186,8 @@ export default function Ayuda() {
         <p className="mt-2 text-gray-600 dark:text-gray-300">Encuentra respuestas a preguntas frecuentes y contacta con nuestro equipo de soporte.</p>
       </div>
       
-      <div className="flex-1 space-y-6 overflow-auto pb-6">
+      <div className="space-y-6 pb-24"> {/* Aumentado el padding-bottom a 24 (6rem) */}
+        {/* Resto del contenido sin cambios */}
         <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 transition-all duration-200 hover:shadow-lg">
           <div className="flex items-center gap-3 mb-4">
             <FiClipboard className="text-xl text-blue-500 dark:text-blue-400" />

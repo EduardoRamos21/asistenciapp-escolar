@@ -13,21 +13,55 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { nombre, grupoId, directorId } = req.body
+    const { nombre, grupoId, directorId, maestroId } = req.body
 
-    if (!nombre || !grupoId || !directorId) {
+    if (!nombre || !grupoId || (!directorId && !maestroId)) {
       return res.status(400).json({ error: 'Faltan datos requeridos' })
     }
 
-    // Verificar que el usuario que hace la solicitud es un director
-    const { data: director, error: errorDirector } = await supabaseAdmin
-      .from('directores')
-      .select('escuela_id')
-      .eq('usuario_id', directorId)
-      .single()
+    let escuelaId;
+    
+    // Verificar si la solicitud viene de un director o de un maestro
+    if (directorId) {
+      // Verificar que el usuario que hace la solicitud es un director
+      const { data: director, error: errorDirector } = await supabaseAdmin
+        .from('directores')
+        .select('escuela_id')
+        .eq('usuario_id', directorId)
+        .single()
 
-    if (errorDirector || !director) {
-      return res.status(403).json({ error: 'No autorizado o director no encontrado' })
+      if (errorDirector || !director) {
+        return res.status(403).json({ error: 'No autorizado o director no encontrado' })
+      }
+      
+      escuelaId = director.escuela_id;
+    } else if (maestroId) {
+      // Verificar que el usuario que hace la solicitud es un maestro
+      const { data: maestro, error: errorMaestro } = await supabaseAdmin
+        .from('maestros')
+        .select('id, escuela_id')
+        .eq('usuario_id', maestroId)
+        .single()
+
+      if (errorMaestro || !maestro) {
+        return res.status(403).json({ error: 'No autorizado o maestro no encontrado' })
+      }
+      
+      escuelaId = maestro.escuela_id;
+      
+      // Verificar que el maestro tiene asignado este grupo
+      const { data: asignacion, error: errorAsignacion } = await supabaseAdmin
+        .from('asignaciones')
+        .select('id')
+        .eq('maestro_id', maestro.id)
+        .eq('grupo_id', grupoId)
+        .limit(1)
+      
+      if (errorAsignacion || asignacion.length === 0) {
+        return res.status(403).json({ error: 'No tienes permiso para agregar alumnos a este grupo' })
+      }
+    } else {
+      return res.status(400).json({ error: 'Se requiere ID de director o maestro' })
     }
 
     // Obtener información del grupo para generar el email
@@ -57,8 +91,7 @@ export default async function handler(req, res) {
     // Crear email más corto
     const email = `${primerNombre}${primerApellido ? '.' + primerApellido : ''}${randomNum}@asistenciapp.edu`;
 
-    // Generar contraseña aleatoria
-    // Usar contraseña por defecto en lugar de aleatoria
+    // Usar contraseña por defecto
     const password = 'password123';
 
     // 1. Crear usuario en Auth
@@ -95,7 +128,7 @@ export default async function handler(req, res) {
         {
           usuario_id: userData.user.id,
           grupo_id: grupoId,
-          escuela_id: director.escuela_id
+          escuela_id: escuelaId
         }
       ])
       .select()

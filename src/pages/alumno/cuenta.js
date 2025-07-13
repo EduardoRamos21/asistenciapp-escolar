@@ -265,9 +265,9 @@ export default function Cuenta() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+              <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg overflow-hidden">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Correo electrónico</p>
-                <p className="text-gray-800 dark:text-gray-200">{usuario.email}</p>
+                <p className="text-gray-800 dark:text-gray-200 break-words">{usuario.email}</p>
               </div>
             </div>
 

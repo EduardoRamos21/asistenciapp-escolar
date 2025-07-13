@@ -10,6 +10,9 @@ export default function BannerCarousel() {
 
   // Cargar anuncios desde Supabase
   useEffect(() => {
+    // Usar una variable para controlar si el componente está montado
+    let isMounted = true;
+    
     const fetchAnuncios = async () => {
       const now = new Date().toISOString();
       const { data, error } = await supabase
@@ -18,17 +21,22 @@ export default function BannerCarousel() {
         .eq('activo', true)
         .lte('fecha_inicio', now)
         .gte('fecha_fin', now);
-
+  
       if (error) {
         console.error('Error al cargar anuncios:', error);
-      } else {
+      } else if (isMounted) { // Solo actualizar el estado si el componente sigue montado
         console.log('Anuncios cargados:', data);
         setAnuncios(data || []);
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
-
+  
     fetchAnuncios();
+  
+    // Limpiar al desmontar
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Rotación automática simple cada 5 segundos
@@ -42,7 +50,7 @@ export default function BannerCarousel() {
         return nextIndex >= anuncios.length ? 0 : nextIndex;
       });
     }, 10000); // Cambiar cada 10 segundos
-
+  
     return () => clearInterval(interval);
   }, [anuncios.length]);
 

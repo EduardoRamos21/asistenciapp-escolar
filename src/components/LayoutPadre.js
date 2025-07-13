@@ -5,12 +5,23 @@ import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
 import { FaHome, FaChild } from 'react-icons/fa'
 import { supabase } from '@/lib/supabase'
 import BannerCarousel from '@/components/BannerCarousel'
+import { useNotificaciones } from '@/contexts/NotificacionesContext';
 
 export default function LayoutPadre({ children }) {
   const router = useRouter()
   const [hijos, setHijos] = useState([])
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  
+  // Usamos useEffect para determinar si estamos en el cliente
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+  
+  // Solo accedemos al contexto de notificaciones si estamos en el cliente
+  const notificaciones = useNotificaciones() || { inicializado: false }
+  const { inicializado } = notificaciones
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -19,6 +30,9 @@ export default function LayoutPadre({ children }) {
 
   useEffect(() => {
     const fetchHijos = async () => {
+      // Verificar si ya tenemos los hijos para evitar solicitudes innecesarias
+      if (hijos.length > 0 && !loading) return;
+      
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -58,7 +72,16 @@ export default function LayoutPadre({ children }) {
     }
 
     fetchHijos()
-  }, [router])
+  }, []) // Eliminar router como dependencia
+
+  // Mostrar indicador de carga si las notificaciones no están inicializadas
+  if (isClient && !inicializado) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-screen min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">

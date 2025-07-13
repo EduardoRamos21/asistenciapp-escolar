@@ -191,7 +191,7 @@ export default function useAsistencias() {
         // Inicializar asistencias
         const asistenciasIniciales = {};
         alumnosFormateados.forEach(alumno => {
-          asistenciasIniciales[alumno.id] = true; // Por defecto todos presentes
+          asistenciasIniciales[alumno.id] = false; // Por defecto todos ausentes
         });
 
         setAsistencias(asistenciasIniciales);

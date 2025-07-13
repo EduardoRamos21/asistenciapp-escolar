@@ -80,15 +80,17 @@ export default function VistaPadre() {
           </p>
         </div>
         {usuario && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-semibold">{usuario.nombre}</p>
-              <p className="text-sm text-blue-200">Padre de familia</p>
+          <Link href="/padre/cuenta">
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="text-right">
+                <p className="font-semibold">{usuario.nombre}</p>
+                <p className="text-sm text-blue-200">Padre de familia</p>
+              </div>
+              <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center">
+                <FaUser className="h-6 w-6 text-white" />
+              </div>
             </div>
-            <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center">
-              <FaUser className="h-6 w-6 text-white" />
-            </div>
-          </div>
+          </Link>
         )}
       </div>
 

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import useEstadisticasMaestro from '@/hooks/useEstadisticasMaestro';
 import { HiOutlineAcademicCap, HiOutlineBookOpen } from 'react-icons/hi';
-import { HiOutlineClipboardCheck, HiOutlineClipboardList } from 'react-icons/hi';
+import { HiOutlineClipboardCheck, HiOutlineClipboardList,HiUserGroup } from 'react-icons/hi';
 import useAuth from '@/hooks/useAuth';
 import { FiUser } from 'react-icons/fi';
 
@@ -43,54 +43,67 @@ export default function MaestroDashboard() {
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">{fecha}</h2>
         {usuario && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-semibold text-gray-800 dark:text-gray-100">{usuario.nombre}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Profesor</p>
+          <Link href="/maestro/cuenta">
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="text-right">
+                <p className="font-semibold text-gray-800 dark:text-gray-100">{usuario.nombre}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Profesor</p>
+              </div>
+              <div className="relative w-12 h-12 overflow-hidden rounded-full ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <FiUser className="text-white text-xl" />
+              </div>
             </div>
-            <div className="relative w-12 h-12 overflow-hidden rounded-full ring-2 ring-blue-500 dark:ring-blue-400 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-              <FiUser className="text-white text-xl" />
-            </div>
-          </div>
+          </Link>
         )}
       </div>
 
-      {/* Tarjetas resumen */}
+      {/* Tarjetas resumen con enlaces */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <Card 
-          color="from-blue-500 to-blue-600" 
-          title="Alumnos" 
-          valor={loading ? '...' : estadisticas.totalAlumnos} 
-          icon={<HiOutlineAcademicCap className="text-4xl" />}
-        />
-        <Card 
-          color="from-amber-400 to-amber-500" 
-          title="Materias" 
-          valor={loading ? '...' : estadisticas.totalMaterias} 
-          icon={<HiOutlineBookOpen className="text-4xl" />}
-        />
-        <Card 
-          color="from-emerald-500 to-emerald-600" 
-          title="Asistencia del día" 
-          valor={loading ? '...' : `${estadisticas.asistenciaDia}%`} 
-          icon={<HiOutlineClipboardCheck className="text-4xl" />}
-        />
-        <Card 
-          color="from-indigo-500 to-indigo-600" 
-          title="Tareas activas" 
-          valor={loading ? '...' : estadisticas.tareasActivas} 
-          icon={<HiOutlineClipboardList className="text-4xl" />}
-        />
+        <Link href="/maestro/grupos" className="block">
+          <Card 
+            color="from-blue-500 to-blue-600" 
+            title="Alumnos" 
+            valor={loading ? '...' : estadisticas.totalAlumnos} 
+            icon={<HiOutlineAcademicCap className="text-4xl" />}
+          />
+        </Link>
+        <Link href="/maestro/horario" className="block">
+          <Card 
+            color="from-amber-400 to-amber-500" 
+            title="Materias" 
+            valor={loading ? '...' : estadisticas.totalMaterias} 
+            icon={<HiOutlineBookOpen className="text-4xl" />}
+          />
+        </Link>
+        <Link href="/maestro/asistencia" className="block">
+          <Card 
+            color="from-emerald-500 to-emerald-600" 
+            title="Asistencia del día" 
+            valor={loading ? '...' : `${estadisticas.asistenciaDia}%`} 
+            icon={<HiOutlineClipboardCheck className="text-4xl" />}
+          />
+        </Link>
+        <Link href="/maestro/historial" className="block">
+          <Card 
+            color="from-indigo-500 to-indigo-600" 
+            title="Tareas activas" 
+            valor={loading ? '...' : estadisticas.tareasActivas} 
+            icon={<HiOutlineClipboardList className="text-4xl" />}
+          />
+        </Link>
       </div>
 
       {/* Botones de acción con navegación */}
       <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Acciones rápidas</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/maestro/asistencia" className="w-full">
           <ActionButton text="Registrar asistencia" icon={<HiOutlineClipboardCheck />} />
         </Link>
         <Link href="/maestro/tareas" className="w-full">
           <ActionButton text="Gestionar tareas" icon={<HiOutlineClipboardList />} />
+        </Link>
+        <Link href="/maestro/grupos" className="w-full">
+          <ActionButton text="Gestionar grupos" icon={<HiUserGroup />} />
         </Link>
         <Link href="/maestro/historial" className="w-full">
           <ActionButton text="Ver historial" icon={<HiOutlineBookOpen />} />

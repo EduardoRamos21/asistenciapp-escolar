@@ -6,12 +6,23 @@ import { FiUser, FiHelpCircle, FiLogOut, FiPlus, FiHome } from 'react-icons/fi'
 import { HiOutlineClipboardList } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
 import BannerCarousel from '@/components/BannerCarousel'
+import { useNotificaciones } from '@/contexts/NotificacionesContext';
 
 export default function LayoutAlumno({ children }) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [usuario, setUsuario] = useState(null)
+  const [isClient, setIsClient] = useState(false)
+  
+  // Usamos useEffect para determinar si estamos en el cliente
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+  
+  // Solo accedemos al contexto de notificaciones si estamos en el cliente
+  const notificaciones = useNotificaciones() || { inicializado: false }
+  const { inicializado } = notificaciones
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -20,6 +31,9 @@ export default function LayoutAlumno({ children }) {
 
   useEffect(() => {
     const fetchUsuario = async () => {
+      // Verificar si ya tenemos el usuario para evitar solicitudes innecesarias
+      if (usuario && !loading) return;
+      
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -49,7 +63,16 @@ export default function LayoutAlumno({ children }) {
     }
 
     fetchUsuario()
-  }, [router, router.pathname])
+  }, []) // Eliminar router.pathname como dependencia
+
+  // Mostrar indicador de carga si las notificaciones no están inicializadas
+  if (isClient && !inicializado) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-screen min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">

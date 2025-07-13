@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
-import { HiOutlineClipboardCheck, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiOutlineClipboardCheck, HiOutlineClipboardList,HiUserGroup } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
 import { FiHome, FiCalendar } from 'react-icons/fi';
 import BannerCarousel from '@/components/BannerCarousel'
@@ -33,36 +33,39 @@ export default function LayoutMaestro({ children }) {
 
   useEffect(() => {
     const fetchUsuario = async () => {
+      // Verificar si ya tenemos el usuario para evitar solicitudes innecesarias
+      if (usuario && !loading) return;
+      
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
         return
       }
-
+  
       // Verificar que el usuario es maestro
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('rol, nombre, avatar_url')
         .eq('id', user.id)
         .single()
-
+  
       if (userError || userData?.rol !== 'maestro') {
         router.push('/')
         return
       }
-
+  
       setUsuario({
         id: user.id,
         nombre: userData.nombre,
         email: user.email,
         avatar_url: userData.avatar_url
       })
-
+  
       setLoading(false)
     }
-
+  
     fetchUsuario()
-  }, [router, router.pathname]) // Añadir router.pathname como dependencia
+  }, []) // Eliminar router.pathname como dependencia
 
   // En el return, puedes mostrar un indicador de carga si las notificaciones no están inicializadas
   if (isClient && !inicializado) {
@@ -115,6 +118,10 @@ export default function LayoutMaestro({ children }) {
             <Link href="/maestro/tareas" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro/tareas' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
               <HiOutlineClipboardList className="text-xl" />
               <span>Tareas</span>
+            </Link>
+            <Link href="/maestro/grupos" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro/grupos' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+              <HiUserGroup className="text-xl" />
+              <span>Grupos</span>
             </Link>
             <Link href="/maestro/historial" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out ${router.pathname === '/maestro/historial' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'}`}>
               <FiCalendar className="text-xl" />

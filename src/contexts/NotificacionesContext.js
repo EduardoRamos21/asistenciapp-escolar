@@ -10,6 +10,9 @@ export function NotificacionesProvider({ children }) {
   const [inicializado, setInicializado] = useState(false);
 
   useEffect(() => {
+    // Evitar inicialización si ya está inicializado
+    if (inicializado) return;
+    
     console.log('NotificacionesContext: Inicializando');
     
     // Verificar si el usuario está autenticado
@@ -81,7 +84,7 @@ export function NotificacionesProvider({ children }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [permisoSolicitado]);
+  }, [permisoSolicitado, inicializado]); // Añadir inicializado como dependencia
 
   return (
     <NotificacionesContext.Provider value={{ inicializado, usuario, permisoSolicitado }}>

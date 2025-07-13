@@ -2,7 +2,7 @@ import withPWA from 'next-pwa';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // Cambiar a false para evitar renderizados dobles en desarrollo
   images: {
     domains: ['pfpacewgyctqtqnlbvhj.supabase.co'],
     remotePatterns: [
@@ -14,6 +14,14 @@ const nextConfig = {
       },
     ],
     unoptimized: true,
+  },
+  // Añadir configuración de webpack para optimizar el rendimiento
+  webpack: (config, { dev, isServer }) => {
+    // Optimizaciones solo para producción
+    if (!dev) {
+      config.optimization.minimize = true;
+    }
+    return config;
   },
 };
 

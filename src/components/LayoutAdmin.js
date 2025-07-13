@@ -4,10 +4,23 @@ import { useEffect, useState } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus, FiSend } from 'react-icons/fi'
 import { FaAd, FaHome } from 'react-icons/fa'
 import { supabase } from '@/lib/supabase'
+import { useNotificaciones } from '@/contexts/NotificacionesContext';
 
 export default function LayoutAdmin({ children }) {
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [usuario, setUsuario] = useState(null)
+  
+  // Usamos useEffect para determinar si estamos en el cliente
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+  
+  // Solo accedemos al contexto de notificaciones si estamos en el cliente
+  const notificaciones = useNotificaciones() || { inicializado: false }
+  const { inicializado } = notificaciones
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -16,6 +29,9 @@ export default function LayoutAdmin({ children }) {
 
   useEffect(() => {
     const verificarAdmin = async () => {
+      // Verificar si ya tenemos el usuario para evitar solicitudes innecesarias
+      if (usuario && !loading) return;
+      
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -32,10 +48,25 @@ export default function LayoutAdmin({ children }) {
         router.push('/')
         return
       }
+      
+      setUsuario({
+        id: user.id
+      })
+      
+      setLoading(false)
     }
 
     verificarAdmin()
-  }, [router])
+  }, []) // Eliminar router como dependencia
+
+  // Mostrar indicador de carga si las notificaciones no están inicializadas
+  if (isClient && !inicializado) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen h-screen bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">

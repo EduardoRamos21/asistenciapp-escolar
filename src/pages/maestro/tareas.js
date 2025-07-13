@@ -154,21 +154,6 @@ export default function Tareas() {
         <h2 className="text-xl font-semibold text-indigo-800 dark:text-indigo-300">
           {new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
         </h2>
-        {usuario && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-semibold">{usuario.nombre}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Profesor</p>
-            </div>
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-100 flex items-center justify-center">
-              {usuario.avatar_url ? (
-                <Image src={usuario.avatar_url} alt="perfil" width={40} height={40} className="rounded-full object-cover" />
-              ) : (
-                <Image src="/perfil.jpg" alt="perfil" width={40} height={40} className="rounded-full" />
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 animate-fade-in">
@@ -302,13 +287,16 @@ export default function Tareas() {
             </div>
             <div className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {tareasFiltradas.map(t => (
-                <div key={t.id} className="grid grid-cols-12 px-4 py-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <div 
+                  key={t.id} 
+                  className="grid grid-cols-12 px-4 py-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/maestro/tareas/${t.id}`)}
+                >
                   <span className="col-span-5 font-medium text-gray-800 dark:text-gray-200">{t.titulo}</span>
                   <span className="col-span-3 text-gray-600 dark:text-gray-400">{t.materias?.nombre}</span>
                   <span className="col-span-3 text-gray-600 dark:text-gray-400">{new Date(t.fecha_entrega).toLocaleDateString()}</span>
                   <div className="col-span-1 flex justify-center">
                     <button
-                      onClick={() => router.push(`/maestro/tareas/${t.id}`)}
                       className="p-2 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"
                       title="Ver entregas y calificar"
                     >

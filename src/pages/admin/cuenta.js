@@ -225,7 +225,7 @@ export default function CuentaAdmin() {
                 type="email" 
                 name="email" 
                 value={formData.email} 
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 cursor-not-allowed" 
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 cursor-not-allowed overflow-hidden break-words" 
                 disabled 
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El email no se puede cambiar</p>

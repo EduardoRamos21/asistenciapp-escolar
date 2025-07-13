@@ -238,21 +238,6 @@ export default function DetalleTarea() {
             day: '2-digit', month: 'long', year: 'numeric'
           })}
         </h2>
-        {usuario && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-semibold">{usuario.nombre}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Alumno</p>
-            </div>
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
-              {usuario.avatar_url ? (
-                <Image src={usuario.avatar_url} alt="perfil" width={40} height={40} className="rounded-full object-cover" />
-              ) : (
-                <Image src="/perfil.jpg" alt="perfil" width={40} height={40} className="rounded-full" />
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       <button 

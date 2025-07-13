@@ -41,21 +41,23 @@ export default function DirectorDashboard() {
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">{fecha}</h2>
         {usuario && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-semibold text-gray-800 dark:text-gray-100">{usuario.nombre}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Director</p>
+          <Link href="/director/cuenta">
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="text-right">
+                <p className="font-semibold text-gray-800 dark:text-gray-100">{usuario.nombre}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Director</p>
+              </div>
+              <div className="relative w-12 h-12 overflow-hidden rounded-full ring-2 ring-blue-500 dark:ring-blue-400">
+                <Image 
+                  src={usuario.img || "/perfil.jpg"} 
+                  alt="perfil" 
+                  width={48} 
+                  height={48} 
+                  className="object-cover" 
+                />
+              </div>
             </div>
-            <div className="relative w-12 h-12 overflow-hidden rounded-full ring-2 ring-blue-500 dark:ring-blue-400">
-              <Image 
-                src={usuario.img || "/perfil.jpg"} 
-                alt="perfil" 
-                width={48} 
-                height={48} 
-                className="object-cover" 
-              />
-            </div>
-          </div>
+          </Link>
         )}
       </div>
 

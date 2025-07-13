@@ -302,13 +302,13 @@ export default function CuentaPadre() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
+              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg overflow-hidden">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 flex items-center">
                   <FaEnvelope className="mr-2 text-indigo-400" /> Correo electrónico
                 </p>
-                <p className="font-medium">{usuario.email}</p>
+                <p className="font-medium break-words">{usuario.email}</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
+              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg overflow-hidden">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Escuela</p>
                 <p className="font-medium">{usuario.escuela_id ? `ID: ${usuario.escuela_id}` : 'No asignada'}</p>
               </div>

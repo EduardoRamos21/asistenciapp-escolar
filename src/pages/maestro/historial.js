@@ -104,17 +104,7 @@ export default function HistorialAsistencias() {
             Historial de Asistencias
           </h2>
         </div>
-        {usuario && (
-          <div className="flex items-center gap-3 bg-indigo-600/10 dark:bg-indigo-400/10 px-3 py-2 rounded-lg">
-            <div className="text-right">
-              <p className="font-semibold text-gray-800 dark:text-gray-200">{usuario.nombre}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Profesor</p>
-            </div>
-            <div className="bg-indigo-100 dark:bg-indigo-800 p-1 rounded-full">
-              <FiUser className="text-indigo-600 dark:text-indigo-300 text-xl" />
-            </div>
-          </div>
-        )}
+        
       </div>
 
       {error && (
@@ -165,12 +155,17 @@ export default function HistorialAsistencias() {
           
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha</label>
-            <input 
-              type="date" 
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              value={filtroFecha}
-              onChange={(e) => setFiltroFecha(e.target.value)}
-            />
+            <div className="relative">
+              <input 
+                type="date" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0"
+                value={filtroFecha}
+                onChange={(e) => setFiltroFecha(e.target.value)}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <FiCalendar className="text-white" />
+              </div>
+            </div>
           </div>
         </div>
 
