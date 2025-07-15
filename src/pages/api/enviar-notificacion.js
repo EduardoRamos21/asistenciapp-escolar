@@ -122,24 +122,19 @@ export default async function handler(req, res) {
       .select('token, usuario_id, rol')
       .in('usuario_id', usuarios.map(u => u.id))
       .eq('activo', true); // Asegurarse de que solo se usen tokens activos
-    
-    // Si la notificación es para un rol específico, filtrar por ese rol
-    if (rol && rol !== 'todos') {
-      tokensQuery = tokensQuery.eq('rol', rol);
-    }
-    
+
     const { data: tokens, error: errorTokens } = await tokensQuery;
-    
+
     if (errorTokens) {
       console.error('Error al buscar tokens:', errorTokens);
     }
-    
-    // Eliminar tokens duplicados y asegurar que solo se envíen a usuarios con el rol correcto
+
+    // Eliminar tokens duplicados
     const uniqueTokens = [];
     const processedUserTokens = new Set();
-    
+
     if (tokens && tokens.length > 0) {
-      // Filtrar tokens para asegurar que coincidan con el rol especificado
+      // Filtrar tokens por rol si es necesario
       const tokensFiltered = rol && rol !== 'todos' 
         ? tokens.filter(t => t.rol === rol)
         : tokens;
@@ -156,11 +151,6 @@ export default async function handler(req, res) {
     // Usar uniqueTokens directamente
     let tokensList = uniqueTokens;
     
-    // Eliminar este bloque que sobrescribe tokensList
-    // if (tokens && tokens.length > 0) {
-    //   tokensList = tokens.map(t => t.token);
-    // }
-
     // Si no hay tokens, actualizar estado pero considerar exitoso el registro de notificaciones
     if (tokensList.length === 0) {
       await supabaseAdmin

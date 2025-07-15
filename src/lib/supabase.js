@@ -9,7 +9,22 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storageKey: 'supabase.auth.token', // Asegura que la clave de almacenamiento sea consistente
+    storage: {
+      getItem: (key) => {
+        if (typeof window === 'undefined') return null;
+        return window.localStorage.getItem(key);
+      },
+      setItem: (key, value) => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(key, value);
+      },
+      removeItem: (key) => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.removeItem(key);
+      }
+    }
   },
   global: {
     headers: {
@@ -42,3 +57,17 @@ export const downloadImage = async (bucket, path) => {
 };
 
 export { supabaseUrl };
+
+// Función auxiliar para asegurar que todas las solicitudes tengan el encabezado apikey
+export const fetchWithApiKey = async (url, options = {}) => {
+  const headers = {
+    ...options.headers,
+    'apikey': supabaseKey,
+    'Authorization': `Bearer ${supabaseKey}`
+  };
+  
+  return fetch(url, {
+    ...options,
+    headers
+  });
+};

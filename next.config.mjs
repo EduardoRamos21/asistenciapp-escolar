@@ -30,8 +30,8 @@ const pwaConfig = withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  // Añadir esta configuración para excluir firebase-messaging-sw.js
-  buildExcludes: [/firebase-messaging-sw\.js$/]
+  // Añadir esta configuración para excluir archivos problemáticos
+  buildExcludes: [/firebase-messaging-sw\.js$/, /dynamic-css-manifest\.json$/]
 })(nextConfig);
 
 export default pwaConfig;

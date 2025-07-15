@@ -10,6 +10,63 @@ export function NotificacionesProvider({ children }) {
   const [inicializado, setInicializado] = useState(false);
   const [errorNotificaciones, setErrorNotificaciones] = useState(null);
 
+  // Verificar si el usuario está autenticado
+  const obtenerUsuario = async () => {
+    try {
+      console.log('NotificacionesContext: Verificando usuario autenticado');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('NotificacionesContext: Error al obtener usuario:', authError);
+        return;
+      }
+      
+      console.log('NotificacionesContext: Usuario obtenido', user ? 'Sí' : 'No');
+      
+      if (user) {
+        setUsuario(user);
+        
+        // Verificar que el ID de usuario sea válido antes de consultar
+        if (!user.id) {
+          console.error('NotificacionesContext: ID de usuario no válido');
+          return;
+        }
+        
+        // Obtener rol del usuario
+        const { data: usuarioData, error: userError } = await supabase
+          .from('usuarios')
+          .select('rol')
+          .eq('id', user.id)
+          .single();
+        
+        if (userError) {
+          console.error('NotificacionesContext: Error al obtener rol del usuario:', userError);
+          return;
+        }
+        
+        console.log('NotificacionesContext: Rol del usuario', usuarioData?.rol);
+        
+        // Solicitar permiso para notificaciones
+        if (usuarioData && !permisoSolicitado) {
+          try {
+            console.log('NotificacionesContext: Solicitando permiso para notificaciones');
+            const permisoConcedido = await requestNotificationPermission(user.id, usuarioData.rol);
+            console.log('NotificacionesContext: Permiso concedido', permisoConcedido ? 'Sí' : 'No');
+            
+            if (permisoConcedido) {
+              setupMessageHandler();
+            }
+            setPermisoSolicitado(true);
+          } catch (error) {
+            console.error('NotificacionesContext: Error al solicitar permiso:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('NotificacionesContext: Error general al obtener usuario:', error);
+    }
+  };
+
   useEffect(() => {
     // Evitar inicialización si ya está inicializado
     if (inicializado) return;
@@ -27,67 +84,20 @@ export function NotificacionesProvider({ children }) {
       }
     };
     
-    verificarServiceWorker();
-    
-    // Verificar si el usuario está autenticado
-    const obtenerUsuario = async () => {
+    // Añadir un pequeño retraso para asegurar que la autenticación esté lista
+    setTimeout(async () => {
       try {
-        console.log('NotificacionesContext: Verificando usuario autenticado');
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('NotificacionesContext: Usuario obtenido', user ? 'Sí' : 'No');
-        
-        if (user) {
-          setUsuario(user);
-
-          // Obtener rol del usuario
-          const { data: usuarioData, error: userError } = await supabase
-            .from('usuarios')
-            .select('rol')
-            .eq('id', user.id)
-            .single();
-
-          if (userError) {
-            console.error('NotificacionesContext: Error al obtener rol del usuario:', userError);
-            setErrorNotificaciones('Error al obtener rol del usuario: ' + userError.message);
-            setInicializado(true);
-            return;
-          }
-
-          console.log('NotificacionesContext: Rol del usuario', usuarioData ? usuarioData.rol : 'No encontrado');
-
-          if (usuarioData) {
-            // Solicitar permiso para notificaciones
-            if (!permisoSolicitado) {
-              try {
-                console.log('NotificacionesContext: Solicitando permiso para notificaciones');
-                const permisoConcedido = await requestNotificationPermission(user.id, usuarioData.rol);
-                console.log('NotificacionesContext: Permiso concedido', permisoConcedido ? 'Sí' : 'No');
-                
-                if (permisoConcedido) {
-                  // Configurar manejador de mensajes en primer plano
-                  setupMessageHandler();
-                } else {
-                  console.warn('NotificacionesContext: Permiso de notificaciones denegado por el usuario');
-                }
-                setPermisoSolicitado(true);
-              } catch (error) {
-                console.error('NotificacionesContext: Error al solicitar permiso:', error);
-                setErrorNotificaciones('Error al solicitar permiso: ' + error.message);
-              }
-            }
-          }
-        }
-        
+        await verificarServiceWorker();
+        await obtenerUsuario();
         setInicializado(true);
       } catch (error) {
-        console.error('NotificacionesContext: Error general:', error);
-        setErrorNotificaciones('Error general: ' + error.message);
-        setInicializado(true);
+        console.error('NotificacionesContext: Error en inicialización:', error);
+        setErrorNotificaciones('Error en inicialización: ' + error.message);
       }
-    };
+    }, 1000); // Retraso de 1 segundo
+  }, []);
 
-    obtenerUsuario();
-
+  useEffect(() => {
     // Escuchar cambios en la autenticación
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
@@ -130,8 +140,8 @@ export function NotificacionesProvider({ children }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [permisoSolicitado, inicializado]); 
-
+  }, [permisoSolicitado, inicializado]);
+  
   // Función para solicitar permiso manualmente
   const solicitarPermisoManualmente = async () => {
     try {

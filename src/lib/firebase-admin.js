@@ -1,5 +1,12 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
+import { createClient } from '@supabase/supabase-js';
+
+// Inicializar cliente de Supabase con la clave de servicio
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
 const firebaseAdminConfig = {
   credential: cert({
