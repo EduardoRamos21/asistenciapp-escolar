@@ -4,7 +4,6 @@ import { useRouter } from 'next/router'
 import Image from 'next/image'
 import { HiMagnifyingGlass, HiOutlineDocumentText, HiOutlinePlus, HiOutlineCalendarDays, HiOutlineBookOpen } from 'react-icons/hi2'
 import { supabase } from '@/lib/supabase'
-import { notificarNuevaTarea } from '@/lib/notificacionesService';
 
 export default function Tareas() {
   const router = useRouter()
@@ -56,7 +55,7 @@ export default function Tareas() {
       // Cargar materias del maestro
       const { data: asignacionesData, error: errorAsignaciones } = await supabase
         .from('asignaciones')
-        .select('materia_id, grupo_id, materias(id, nombre)')
+        .select('materia_id, materias(id, nombre)')
         .eq('maestro_id', maestro.id);
       
       if (errorAsignaciones) {
@@ -68,11 +67,7 @@ export default function Tareas() {
       const materiasMap = {};
       asignacionesData.forEach(asignacion => {
         if (asignacion.materias) {
-          // Guardar el grupo_id junto con la información de la materia
-          materiasMap[asignacion.materias.id] = {
-            ...asignacion.materias,
-            grupo_id: asignacion.grupo_id
-          };
+          materiasMap[asignacion.materias.id] = asignacion.materias;
         }
       });
       const materiasData = Object.values(materiasMap);
@@ -114,50 +109,23 @@ export default function Tareas() {
       ? new Date(fechaEntrega).toISOString()
       : new Date().toISOString()
 
-    const { data: nuevaTarea, error } = await supabase.from('tareas').insert([{
+    const { error } = await supabase.from('tareas').insert([{
       titulo,
       descripcion,
       materia_id: parseInt(materiaId),
       fecha_entrega: fechaFormateada
-    }]).select().single()
+    }])
 
     if (error) {
-      setMensajeError(error.message);
+      setMensajeError(error.message)
     } else {
-      setMensajeExito('Tarea creada correctamente');
-      
-      // Obtener la materia del estado usando el ID seleccionado
-      const materiaSeleccionada = materias.find(m => m.id === parseInt(materiaId));
-      
-      // Limpiar el formulario
-      setTitulo('');
-      setDescripcion('');
-      setMateriaId('');
-      setFechaEntrega('');
-      setMostrarFormulario(false);
-  
-      if (materiaSeleccionada && materiaSeleccionada.grupo_id) {
-        // Obtener alumnos del grupo
-        const { data: alumnos } = await supabase
-          .from('alumnos')
-          .select('id')
-          .eq('grupo_id', materiaSeleccionada.grupo_id);
-        
-        // Enviar notificación a cada alumno
-        if (alumnos && alumnos.length > 0) {
-          for (const alumno of alumnos) {
-            await notificarNuevaTarea(
-              alumno.id,
-              nuevaTarea,
-              materiaSeleccionada.nombre,
-              fechaFormateada
-            );
-          }
-        }
-      } else {
-        console.log('No se pudo enviar notificaciones: La materia no tiene un grupo asignado');
-      }
-  
+      setMensajeExito('Tarea creada correctamente')
+      setTitulo('')
+      setDescripcion('')
+      setMateriaId('')
+      setFechaEntrega('')
+      setMostrarFormulario(false)
+
       // Actualizar lista
       const { data: nuevasTareas } = await supabase
         .from('tareas')
