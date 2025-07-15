@@ -29,6 +29,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Función para solicitar permiso y registrar el token FCM
+// Reemplazar la función existente con esta versión mejorada
 export const requestNotificationPermission = async (userId, userRole) => {
   try {
     if (!messaging) {
@@ -36,27 +37,74 @@ export const requestNotificationPermission = async (userId, userRole) => {
       return false;
     }
 
-    // Solicitar permiso
-    const permission = await Notification.requestPermission();
-    
-    if (permission !== 'granted') {
-      console.log('Permiso de notificación denegado');
+    // Verificar si las notificaciones están soportadas
+    if (!('Notification' in window)) {
+      console.log('Este navegador no soporta notificaciones');
       return false;
     }
 
-    // Obtener token FCM
-    const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
-    });
-
-    if (token) {
-      console.log('Token FCM:', token);
-      
-      // Guardar token en Supabase
-      await guardarTokenEnBaseDeDatos(token, userId, userRole);
-      return true;
+    // Verificar si ya tenemos permiso
+    if (Notification.permission === 'granted') {
+      console.log('Permiso de notificación ya concedido, obteniendo token...');
     } else {
-      console.log('No se pudo obtener el token');
+      // Solicitar permiso
+      console.log('Solicitando permiso de notificación...');
+      const permission = await Notification.requestPermission();
+      
+      if (permission !== 'granted') {
+        console.log('Permiso de notificación denegado');
+        return false;
+      }
+      console.log('Permiso de notificación concedido');
+    }
+
+    // Verificar si el service worker está registrado
+    await checkServiceWorkerRegistration();
+
+    // Obtener token FCM
+    console.log('Obteniendo token FCM...');
+    console.log('VAPID Key:', process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY);
+    
+    try {
+      const token = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+      });
+
+      if (token) {
+        console.log('Token FCM obtenido:', token);
+        
+        // Guardar token en Supabase
+        await guardarTokenEnBaseDeDatos(token, userId, userRole);
+        return true;
+      } else {
+        console.log('No se pudo obtener el token');
+        return false;
+      }
+    } catch (tokenError) {
+      console.error('Error al obtener token FCM:', tokenError);
+      
+      // Verificar si el error está relacionado con el service worker
+      if (tokenError.code === 'messaging/failed-service-worker-registration') {
+        console.log('Error con el registro del service worker, intentando registrar manualmente...');
+        try {
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          console.log('Service worker registrado manualmente, reintentando obtener token...');
+          
+          // Reintentar obtener el token
+          const tokenRetry = await getToken(messaging, {
+            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+          });
+          
+          if (tokenRetry) {
+            console.log('Token FCM obtenido en segundo intento:', tokenRetry);
+            await guardarTokenEnBaseDeDatos(tokenRetry, userId, userRole);
+            return true;
+          }
+        } catch (swError) {
+          console.error('Error al registrar service worker manualmente:', swError);
+        }
+      }
+      
       return false;
     }
   } catch (error) {
@@ -173,6 +221,59 @@ export const setupMessageHandler = () => {
       console.log('Permiso de notificación no concedido:', Notification.permission);
     }
   });
+};
+
+// Añadir esta función después de setupMessageHandler
+
+// Función para verificar el registro del service worker
+export const checkServiceWorkerRegistration = async () => {
+  try {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      console.log('Service Worker no está soportado en este navegador');
+      return false;
+    }
+
+    // Verificar si firebase-messaging-sw.js está registrado
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    console.log('Service Workers registrados:', registrations.length);
+    
+    // Mostrar detalles de cada service worker registrado
+    registrations.forEach((registration, index) => {
+      console.log(`Service Worker ${index + 1}:`, {
+        scope: registration.scope,
+        active: registration.active ? true : false,
+        installing: registration.installing ? true : false,
+        waiting: registration.waiting ? true : false,
+        state: registration.active ? registration.active.state : 'no active worker'
+      });
+    });
+
+    // Verificar si hay un service worker con el scope correcto
+    const hasFirebaseMessagingSW = registrations.some(reg => 
+      reg.scope.includes(window.location.origin) && 
+      (reg.active || reg.installing || reg.waiting)
+    );
+
+    if (!hasFirebaseMessagingSW) {
+      console.warn('No se encontró un Service Worker para Firebase Messaging');
+      
+      // Intentar registrar el service worker manualmente
+      try {
+        console.log('Intentando registrar firebase-messaging-sw.js manualmente...');
+        const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker registrado manualmente:', swRegistration);
+        return true;
+      } catch (regError) {
+        console.error('Error al registrar el Service Worker manualmente:', regError);
+        return false;
+      }
+    }
+
+    return hasFirebaseMessagingSW;
+  } catch (error) {
+    console.error('Error al verificar el registro del Service Worker:', error);
+    return false;
+  }
 };
 
 export { firebaseApp, messaging };

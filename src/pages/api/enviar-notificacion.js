@@ -134,12 +134,17 @@ export default async function handler(req, res) {
       console.error('Error al buscar tokens:', errorTokens);
     }
     
-    // Eliminar tokens duplicados para el mismo usuario
+    // Eliminar tokens duplicados y asegurar que solo se envíen a usuarios con el rol correcto
     const uniqueTokens = [];
     const processedUserTokens = new Set();
     
     if (tokens && tokens.length > 0) {
-      tokens.forEach(t => {
+      // Filtrar tokens para asegurar que coincidan con el rol especificado
+      const tokensFiltered = rol && rol !== 'todos' 
+        ? tokens.filter(t => t.rol === rol)
+        : tokens;
+      
+      tokensFiltered.forEach(t => {
         const userTokenKey = `${t.usuario_id}_${t.token}`;
         if (!processedUserTokens.has(userTokenKey)) {
           uniqueTokens.push(t.token);
