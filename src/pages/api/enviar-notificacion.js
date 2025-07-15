@@ -14,13 +14,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { titulo, cuerpo, datos, rol } = req.body;
+    const { titulo, cuerpo, datos, rol, userId } = req.body;
 
     if (!titulo || !cuerpo) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
     }
 
-    console.log('Iniciando envío de notificación:', { titulo, cuerpo, datos, rol });
+    console.log('Iniciando envío de notificación:', { titulo, cuerpo, datos, rol, userId });
+    
+    // Declarar la variable usuarios al inicio
+    let usuarios = [];
+    
+    // Si hay un userId específico, enviar solo a ese usuario
+    if (userId) {
+      // Obtener el usuario específico
+      const { data: usuario, error: errorUsuario } = await supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('id', userId)
+        .single();
+        
+      if (errorUsuario) {
+        console.error('Error al buscar usuario específico:', errorUsuario);
+        return res.status(500).json({ error: 'Error al buscar usuario' });
+      }
+      
+      if (usuario) {
+        usuarios = [usuario];
+      } else {
+        console.log(`No se encontró el usuario con ID ${userId}`);
+      }
+    }
 
     // Guardar la notificación en la base de datos
     const { data: notificacion, error: errorNotificacion } = await supabaseAdmin
@@ -44,46 +68,46 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Error al guardar notificación' });
     }
 
-    // Obtener usuarios según el rol
-    let usuarios = [];
-    
-    if (rol && rol !== 'todos') {
-      // Obtener usuarios con un rol específico
-      console.log(`Buscando usuarios con rol: ${rol}`);
-      
-      const { data: usuariosRol, error: errorUsuarios } = await supabaseAdmin
-        .from('usuarios')
-        .select('id')
-        .eq('rol', rol);
+    // Obtener usuarios según el rol si no se especificó un userId
+    if (!userId) {
+      if (rol && rol !== 'todos') {
+        // Obtener usuarios con un rol específico
+        console.log(`Buscando usuarios con rol: ${rol}`);
         
-      if (errorUsuarios) {
-        console.error('Error al buscar usuarios por rol:', errorUsuarios);
-        return res.status(500).json({ error: 'Error al buscar usuarios' });
-      }
-      
-      if (usuariosRol && usuariosRol.length > 0) {
-        console.log(`Encontrados ${usuariosRol.length} usuarios con rol ${rol}`);
-        usuarios = usuariosRol;
+        const { data: usuariosRol, error: errorUsuarios } = await supabaseAdmin
+          .from('usuarios')
+          .select('id')
+          .eq('rol', rol);
+          
+        if (errorUsuarios) {
+          console.error('Error al buscar usuarios por rol:', errorUsuarios);
+          return res.status(500).json({ error: 'Error al buscar usuarios' });
+        }
+        
+        if (usuariosRol && usuariosRol.length > 0) {
+          console.log(`Encontrados ${usuariosRol.length} usuarios con rol ${rol}`);
+          usuarios = usuariosRol;
+        } else {
+          console.log(`No se encontraron usuarios con rol ${rol}`);
+        }
       } else {
-        console.log(`No se encontraron usuarios con rol ${rol}`);
-      }
-    } else {
-      // Obtener todos los usuarios
-      console.log('Enviando notificación a todos los usuarios');
-      const { data: todosUsuarios, error: errorTodos } = await supabaseAdmin
-        .from('usuarios')
-        .select('id');
-      
-      if (errorTodos) {
-        console.error('Error al buscar todos los usuarios:', errorTodos);
-        return res.status(500).json({ error: 'Error al buscar usuarios' });
-      }
-      
-      if (todosUsuarios && todosUsuarios.length > 0) {
-        console.log(`Encontrados ${todosUsuarios.length} usuarios en total`);
-        usuarios = todosUsuarios;
-      } else {
-        console.log('No se encontraron usuarios');
+        // Obtener todos los usuarios
+        console.log('Enviando notificación a todos los usuarios');
+        const { data: todosUsuarios, error: errorTodos } = await supabaseAdmin
+          .from('usuarios')
+          .select('id');
+        
+        if (errorTodos) {
+          console.error('Error al buscar todos los usuarios:', errorTodos);
+          return res.status(500).json({ error: 'Error al buscar usuarios' });
+        }
+        
+        if (todosUsuarios && todosUsuarios.length > 0) {
+          console.log(`Encontrados ${todosUsuarios.length} usuarios en total`);
+          usuarios = todosUsuarios;
+        } else {
+          console.log('No se encontraron usuarios');
+        }
       }
     }
 
@@ -150,11 +174,6 @@ export default async function handler(req, res) {
     
     // Usar uniqueTokens directamente
     let tokensList = uniqueTokens;
-    
-    // Eliminar este bloque que sobrescribe tokensList
-    // if (tokens && tokens.length > 0) {
-    //   tokensList = tokens.map(t => t.token);
-    // }
 
     // Si no hay tokens, actualizar estado pero considerar exitoso el registro de notificaciones
     if (tokensList.length === 0) {

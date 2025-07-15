@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase';
 // Función para enviar una notificación a través de la API
 const enviarNotificacion = async (titulo, cuerpo, datos = {}, opciones = {}) => {
   try {
@@ -153,5 +154,40 @@ export const enviarNotificacionMantenimiento = async (titulo, mensaje, fechaInic
       url: '/'
     },
     { rol } // Pasar el rol como parte de las opciones
+  );
+};
+
+
+// Notificación para alumnos sobre nuevas tareas asignadas
+export const notificarNuevaTarea = async (alumnoId, tarea, materia, fechaEntrega) => {
+  const fechaFormateada = new Date(fechaEntrega).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
+  // Obtener el usuario_id correspondiente al alumno_id
+  const { data: alumno } = await supabase
+    .from('alumnos')
+    .select('usuario_id')
+    .eq('id', alumnoId)
+    .single();
+
+  if (!alumno || !alumno.usuario_id) {
+    console.error(`No se pudo encontrar el usuario_id para el alumno ${alumnoId}`);
+    return { error: 'No se pudo encontrar el usuario para enviar la notificación' };
+  }
+
+  return await enviarNotificacion(
+    '📚 Nueva tarea asignada',
+    `Se te ha asignado una nueva tarea: "${tarea.titulo}" de ${materia} para entregar el ${fechaFormateada}.`,
+    {
+      tipo: 'nueva_tarea',
+      tarea_id: tarea.id,
+      materia,
+      fecha_entrega: fechaEntrega,
+      url: `/alumno/tareas`
+    },
+    { userId: alumno.usuario_id }
   );
 };
