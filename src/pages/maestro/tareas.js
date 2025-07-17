@@ -105,28 +105,35 @@ export default function Tareas() {
 
     setGuardando(true)
 
-    const fechaFormateada = fechaEntrega
-      ? new Date(fechaEntrega).toISOString()
-      : new Date().toISOString()
+    try {
+      // Usar el nuevo endpoint que incluye notificaciones
+      const response = await fetch('/api/crear-tarea', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          titulo,
+          descripcion,
+          materia_id: parseInt(materiaId),
+          fecha_entrega: fechaEntrega
+        })
+      });
 
-    const { error } = await supabase.from('tareas').insert([{
-      titulo,
-      descripcion,
-      materia_id: parseInt(materiaId),
-      fecha_entrega: fechaFormateada
-    }])
+      const result = await response.json();
 
-    if (error) {
-      setMensajeError(error.message)
-    } else {
-      setMensajeExito('Tarea creada correctamente')
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al crear la tarea');
+      }
+
+      setMensajeExito(`Tarea creada correctamente. Notificación enviada a ${result.alumnos_notificados} alumnos.`)
       setTitulo('')
       setDescripcion('')
       setMateriaId('')
       setFechaEntrega('')
       setMostrarFormulario(false)
 
-      // Actualizar lista
+      // Actualizar lista de tareas
       const { data: nuevasTareas } = await supabase
         .from('tareas')
         .select('id, titulo, descripcion, fecha_entrega, materia_id, materias(nombre)')
@@ -134,8 +141,11 @@ export default function Tareas() {
         .order('fecha_entrega', { ascending: false })
 
       setTareas(nuevasTareas || [])
-
-      setTimeout(() => setMensajeExito(''), 3000)
+      setTimeout(() => setMensajeExito(''), 5000)
+      
+    } catch (error) {
+      console.error('Error al crear tarea:', error)
+      setMensajeError(error.message)
     }
 
     setGuardando(false)
@@ -232,11 +242,8 @@ export default function Tareas() {
                   type="date"
                   value={fechaEntrega}
                   onChange={(e) => setFechaEntrega(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white pr-10"
+                  className="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  <HiOutlineCalendarDays className="text-gray-500" />
-                </div>
               </div>
             </div>
             <div className="flex justify-end">

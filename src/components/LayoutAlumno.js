@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus, FiHome } from 'react-icons/fi'
 import { HiOutlineClipboardList } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
@@ -14,6 +14,12 @@ export default function LayoutAlumno({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [usuario, setUsuario] = useState(null)
   const [isClient, setIsClient] = useState(false)
+  
+  // Referencias para evitar múltiples verificaciones
+  const verificandoRef = useRef(false)
+  const usuarioVerificadoRef = useRef(false)
+  // Nueva referencia para controlar la generación de tokens
+  const tokenGeneradoRef = useRef(false)
   
   // Usamos useEffect para determinar si estamos en el cliente
   useEffect(() => {
@@ -29,11 +35,68 @@ export default function LayoutAlumno({ children }) {
     if (!error) router.push('/')
   }
 
-  useEffect(() => {
-    const fetchUsuario = async () => {
-      // Verificar si ya tenemos el usuario para evitar solicitudes innecesarias
-      if (usuario && !loading) return;
+  // Nueva función para forzar la generación de token FCM
+  const forzarGeneracionTokenFCM = useCallback(async (userId) => {
+    if (tokenGeneradoRef.current) return;
+    tokenGeneradoRef.current = true;
+    
+    try {
+      console.log('🔄 Forzando generación de token FCM para alumno:', userId);
       
+      // Verificar si ya existe un token activo para este usuario
+      const { data: tokenExistente, error: tokenError } = await supabase
+        .from('push_tokens')
+        .select('token')
+        .eq('user_id', userId)
+        .eq('activo', true)
+        .single();
+      
+      if (tokenExistente && !tokenError) {
+        console.log('✅ Token FCM ya existe para este usuario');
+        return;
+      }
+      
+      // Verificar soporte del navegador
+      if (!('Notification' in window)) {
+        console.log('❌ Este navegador no soporta notificaciones');
+        return;
+      }
+      
+      // Solicitar permisos si no están concedidos
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      
+      if (permission === 'granted') {
+        console.log('✅ Permisos concedidos, generando token FCM...');
+        
+        try {
+          // Importar y ejecutar la función de Firebase
+          const { requestNotificationPermission } = await import('@/lib/firebase');
+          const token = await requestNotificationPermission(userId, 'alumno');
+          
+          if (token) {
+            console.log('🎉 Token FCM generado exitosamente:', token);
+          } else {
+            console.log('⚠️ No se pudo generar el token FCM');
+          }
+        } catch (firebaseError) {
+          console.error('❌ Error al generar token FCM:', firebaseError);
+        }
+      } else {
+        console.log('❌ Permisos de notificación denegados');
+      }
+    } catch (error) {
+      console.error('❌ Error en forzarGeneracionTokenFCM:', error);
+    }
+  }, []);
+
+  const fetchUsuario = useCallback(async () => {
+    if (verificandoRef.current || usuarioVerificadoRef.current) return;
+    verificandoRef.current = true;
+    
+    try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -58,12 +121,26 @@ export default function LayoutAlumno({ children }) {
         email: user.email,
         avatar_url: userData.avatar_url
       })
-
+      
+      usuarioVerificadoRef.current = true;
+      
+      // NUEVA FUNCIONALIDAD: Forzar generación de token FCM después de verificar el usuario
+      setTimeout(() => {
+        forzarGeneracionTokenFCM(user.id);
+      }, 2000); // Esperar 2 segundos para que el contexto se inicialice
+      
+    } catch (error) {
+      console.error('Error verificando alumno:', error);
+      router.push('/')
+    } finally {
       setLoading(false)
+      verificandoRef.current = false;
     }
+  }, [router, forzarGeneracionTokenFCM])
 
+  useEffect(() => {
     fetchUsuario()
-  }, []) // Eliminar router.pathname como dependencia
+  }, [fetchUsuario])
 
   // Mostrar indicador de carga si las notificaciones no están inicializadas
   if (isClient && !inicializado) {

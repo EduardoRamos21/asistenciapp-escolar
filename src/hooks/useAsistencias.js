@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export default function useAsistencias() {
+export function useAsistencias() {
   const [grupos, setGrupos] = useState([]);
   const [materias, setMaterias] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
@@ -11,251 +11,296 @@ export default function useAsistencias() {
   const [materiaSeleccionada, setMateriaSeleccionada] = useState(null);
   const [asistencias, setAsistencias] = useState({});
   const [asignaciones, setAsignaciones] = useState([]);
+  
+  // Usar useRef para evitar múltiples cargas
+  const cargandoDatosRef = useRef(false);
+  const datosInicializadosRef = useRef(false);
+  const usuarioIdRef = useRef(null);
 
-  // Cargar asignaciones del maestro
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const cargarDatos = useCallback(async () => {
+    if (cargandoDatosRef.current || datosInicializadosRef.current) return;
+    cargandoDatosRef.current = true;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || usuarioIdRef.current === user.id) return;
+      
+      usuarioIdRef.current = user.id;
+      console.log('Cargando datos para usuario:', user.id);
+      
+      // Primero obtener el maestro_id desde la tabla maestros
+      const { data: maestroData, error: maestroError } = await supabase
+        .from('maestros')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .single();
 
-        // Obtener el usuario actual
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setError('Usuario no autenticado');
-          return;
-        }
-        console.log('Usuario autenticado:', user.id);
-
-        // Obtener el ID del maestro
-        const { data: maestro, error: errorMaestro } = await supabase
-          .from('maestros')
-          .select('id')
-          .eq('usuario_id', user.id)
-          .single();
-
-        if (errorMaestro) {
-          console.error('Error al obtener maestro:', errorMaestro.message);
-          setError('No se encontró información del maestro');
-          return;
-        }
-        console.log('ID del maestro:', maestro.id);
-
-        // Modificar la consulta para obtener directamente las materias
-        // Primero, verificar si hay asignaciones sin filtrar por maestro
-        const { data: todasAsignaciones } = await supabase
-          .from('asignaciones')
-          .select('id, maestro_id')
-          .limit(10);
-        
-        console.log('Muestra de asignaciones en la BD:', todasAsignaciones);
-        
-        // Luego intentar la consulta original pero con el ID como string para ver si hay diferencia
-        const { data: asignacionesData, error: errorAsignaciones } = await supabase
-          .from('asignaciones')
-          .select(`
-            id,
-            grupo_id,
-            materia_id,
-            horario,
-            grupos:grupo_id(id, nombre),
-            materias:materia_id(id, nombre)
-          `)
-          .eq('maestro_id', maestro.id);
-
-        if (errorAsignaciones) {
-          console.error('Error al cargar asignaciones:', errorAsignaciones.message);
-          setError('Error al cargar asignaciones');
-          return;
-        }
-
-        console.log('Asignaciones cargadas:', asignacionesData);
-        setAsignaciones(asignacionesData || []);
-
-        // Extraer grupos únicos de las asignaciones
-        const gruposUnicos = [];
-        const gruposIds = new Set();
-        
-        asignacionesData.forEach(asignacion => {
-          if (asignacion.grupos && !gruposIds.has(asignacion.grupos.id)) {
-            gruposIds.add(asignacion.grupos.id);
-            gruposUnicos.push({
-              id: asignacion.grupos.id,
-              nombre: asignacion.grupos.nombre
-            });
-          }
-        });
-        
-        console.log('Grupos extraídos:', gruposUnicos);
-        setGrupos(gruposUnicos);
-
-        // Después de obtener asignacionesData y antes de extraer materias
-        console.log('Datos completos de asignaciones:', JSON.stringify(asignacionesData));
-
-        // Extraer los IDs de materias de las asignaciones
-        const materiaIds = asignacionesData
-          .map(asignacion => asignacion.materia_id)
-          .filter(id => id !== null);
-
-        console.log('IDs de materias encontrados:', materiaIds);
-
-        if (materiaIds.length > 0) {
-          // Obtener las materias directamente
-          const { data: materiasDirectas, error: errorMaterias } = await supabase
-            .from('materias')
-            .select('id, nombre')
-            .in('id', materiaIds);
-          
-          console.log('Materias obtenidas directamente:', materiasDirectas);
-          
-          if (!errorMaterias && materiasDirectas) {
-            // Asociar cada materia con su grupo correspondiente
-            const materiasConGrupo = materiasDirectas.map(materia => {
-              const asignacion = asignacionesData.find(a => a.materia_id === materia.id);
-              return {
-                id: materia.id,
-                nombre: materia.nombre,
-                grupo_id: asignacion ? asignacion.grupo_id : null
-              };
-            });
-            
-            console.log('Materias formateadas con grupo:', materiasConGrupo);
-            setMaterias(materiasConGrupo);
-          } else {
-            console.error('Error al obtener materias directamente:', errorMaterias);
-          }
-        } else {
-          console.warn('No se encontraron IDs de materias en las asignaciones');
-        }
-
-        // Extraer materias y verificar que existan datos
-        const materiasData = [];
-        asignacionesData.forEach(asignacion => {
-          if (asignacion.materias && asignacion.materias.id) {
-            materiasData.push({
-              id: asignacion.materias.id,
-              nombre: asignacion.materias.nombre,
-              grupo_id: asignacion.grupo_id
-            });
-          } else {
-            console.warn('Asignación sin materia válida:', asignacion);
-          }
-        });
-        
-        console.log('Materias extraídas:', materiasData);
-        setMaterias(materiasData);
-      } catch (error) {
-        console.error('Error general:', error.message);
-        setError('Error al cargar datos: ' + error.message);
-      } finally {
-        setLoading(false);
+      if (maestroError) {
+        console.error('Error obteniendo datos del maestro:', maestroError);
+        throw new Error('No se encontraron datos del maestro');
       }
-    };
 
-    cargarDatos();
+      console.log('Maestro encontrado:', maestroData);
+
+      // Ahora usar el ID numérico del maestro para obtener asignaciones
+      const { data: asignacionesData, error } = await supabase
+        .from('asignaciones')
+        .select(`
+          id,
+          grupo_id,
+          materia_id,
+          grupos!inner(id, nombre, grado),
+          materias!inner(id, nombre)
+        `)
+        .eq('maestro_id', maestroData.id);
+
+      if (error) throw error;
+      
+      console.log('Asignaciones obtenidas:', asignacionesData);
+      
+      // Procesar datos una sola vez
+      const gruposUnicos = new Map();
+      const materiasData = [];
+      
+      asignacionesData?.forEach(asignacion => {
+        const grupo = asignacion.grupos;
+        const materia = asignacion.materias;
+        
+        if (!gruposUnicos.has(grupo.id)) {
+          gruposUnicos.set(grupo.id, {
+            ...grupo,
+            materias: []
+          });
+        }
+        
+        gruposUnicos.get(grupo.id).materias.push(materia);
+        materiasData.push({
+          ...materia,
+          grupo_id: asignacion.grupo_id
+        });
+      });
+      
+      const gruposArray = Array.from(gruposUnicos.values());
+      
+      console.log('Grupos procesados:', gruposArray);
+      console.log('Materias procesadas:', materiasData);
+      
+      setGrupos(gruposArray);
+      setMaterias(materiasData);
+      setAsignaciones(asignacionesData);
+      datosInicializadosRef.current = true;
+      
+      console.log('Datos cargados exitosamente');
+      
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      setError(error.message);
+    } finally {
+      cargandoDatosRef.current = false;
+      setLoading(false);
+    }
   }, []);
 
-  // Cargar alumnos cuando se selecciona un grupo
   useEffect(() => {
-    const cargarAlumnos = async () => {
-      if (!grupoSeleccionado) {
-        setAlumnos([]);
+    cargarDatos();
+  }, [cargarDatos]);
+
+  // Cargar alumnos cuando se selecciona un grupo (optimizado)
+  const cargarAlumnos = useCallback(async (grupoId) => {
+    if (!grupoId) {
+      setAlumnos([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('alumnos')
+        .select(`
+          id, 
+          usuarios:usuario_id (nombre)
+        `)
+        .eq('grupo_id', grupoId);
+
+      if (error) {
+        setError('Error al cargar alumnos: ' + error.message);
         return;
       }
 
-      try {
-        setLoading(true);
+      // Procesar datos de alumnos
+      const alumnosFormateados = data?.map(alumno => ({
+        id: alumno.id,
+        nombre: alumno.usuarios?.nombre || 'Sin nombre'
+      })) || [];
 
-        // Obtener alumnos del grupo seleccionado con sus nombres
-        const { data, error } = await supabase
-          .from('alumnos')
-          .select(`
-            id, 
-            usuarios:usuario_id (nombre)
-          `)
-          .eq('grupo_id', grupoSeleccionado);
+      setAlumnos(alumnosFormateados);
+      
+      // Inicializar asistencias como ausente para todos los alumnos
+      const asistenciasIniciales = {};
+      alumnosFormateados.forEach(alumno => {
+        asistenciasIniciales[alumno.id] = false; // false = ausente
+      });
+      setAsistencias(asistenciasIniciales);
+      
+    } catch (error) {
+      console.error('Error cargando alumnos:', error);
+      setError('Error al cargar alumnos');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-        if (error) {
-          setError('Error al cargar alumnos: ' + error.message);
-          return;
-        }
+  // Efecto para cargar alumnos cuando cambia el grupo seleccionado
+  useEffect(() => {
+    if (grupoSeleccionado) {
+      cargarAlumnos(grupoSeleccionado);
+    } else {
+      setAlumnos([]);
+      setAsistencias({});
+    }
+  }, [grupoSeleccionado, cargarAlumnos]);
 
-        // Formatear datos de alumnos
-        const alumnosFormateados = data.map(alumno => ({
-          id: alumno.id,
-          nombre: alumno.usuarios?.nombre || 'Sin nombre',
-        }));
-
-        setAlumnos(alumnosFormateados);
-
-        // Inicializar asistencias
-        const asistenciasIniciales = {};
-        alumnosFormateados.forEach(alumno => {
-          asistenciasIniciales[alumno.id] = false; // Por defecto todos ausentes
-        });
-
-        setAsistencias(asistenciasIniciales);
-      } catch (error) {
-        setError('Error: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarAlumnos();
-  }, [grupoSeleccionado]);
-
-  // Cambiar estado de asistencia de un alumno
-  const cambiarAsistencia = (alumnoId) => {
+  // Función para cambiar asistencia de un alumno
+  const cambiarAsistencia = useCallback((alumnoId) => {
     setAsistencias(prev => ({
       ...prev,
       [alumnoId]: !prev[alumnoId]
     }));
-  };
+  }, []);
 
+  // Función para enviar notificaciones de ausencias por WhatsApp
+  const enviarNotificacionesAusencias = useCallback(async () => {
+    try {
+      // Obtener alumnos ausentes
+      const alumnosAusentes = Object.entries(asistencias)
+        .filter(([alumnoId, presente]) => !presente)
+        .map(([alumnoId]) => parseInt(alumnoId));
+
+      if (alumnosAusentes.length === 0) return;
+
+      // Obtener información de los alumnos ausentes y sus padres
+      const { data: alumnosConPadres, error } = await supabase
+        .from('alumnos')
+        .select(`
+          id,
+          usuario_id,
+          usuarios!inner(nombre),
+          padre_alumno!inner(
+            padre_id,
+            usuarios!padre_alumno_padre_id_fkey!inner(
+              nombre,
+              telefono,
+              notificaciones_whatsapp
+            )
+          )
+        `)
+        .in('id', alumnosAusentes);
+
+      if (error) {
+        console.error('Error obteniendo datos de padres:', error);
+        return;
+      }
+
+      // Obtener información de la materia
+      const { data: materia } = await supabase
+        .from('materias')
+        .select('nombre')
+        .eq('id', materiaSeleccionada)
+        .single();
+
+      const nombreMateria = materia?.nombre || 'la materia';
+      const fechaHoy = new Date().toLocaleDateString('es-ES');
+
+      // Enviar notificaciones WhatsApp
+      for (const alumno of alumnosConPadres) {
+        const padre = alumno.padre_alumno[0]?.usuarios;
+        
+        if (padre && padre.telefono && padre.notificaciones_whatsapp) {
+          const mensaje = `🚨 AUSENCIA ESCOLAR\n\n` +
+            `Su hijo/a ${alumno.usuarios.nombre} no asistió a la clase de ${nombreMateria} el día ${fechaHoy}.\n\n` +
+            `Si tiene alguna consulta, por favor contacte a la escuela.\n\n` +
+            `AsistenciApp Escolar`;
+
+          // Enviar notificación WhatsApp
+          try {
+            const response = await fetch('/api/enviar-whatsapp', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                telefono: padre.telefono,
+                mensaje: mensaje
+              })
+            });
+
+            const result = await response.json();
+            if (result.success && result.whatsappLink) {
+              // Abrir WhatsApp Web con el mensaje
+              window.open(result.whatsappLink, '_blank');
+              console.log(`Notificación WhatsApp enviada al padre de ${alumno.usuarios.nombre}`);
+            }
+          } catch (error) {
+            console.error(`Error enviando WhatsApp al padre de ${alumno.usuarios.nombre}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error enviando notificaciones de ausencias:', error);
+    }
+  }, [asistencias, materiaSeleccionada]);
+
+  // Función para guardar asistencias
   // Guardar asistencias en la base de datos
   const guardarAsistencias = async () => {
-    if (!materiaSeleccionada || !grupoSeleccionado) {
-      return { success: false, error: 'Selecciona grupo y materia' };
+    if (!materiaSeleccionada) {
+      return { success: false, error: 'Selecciona una materia' };
     }
-  
+
     try {
-      const fecha = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-      const horaActual = new Date().toTimeString().split(' ')[0]; // Formato HH:MM:SS
+      const ahora = new Date();
+      const fecha = ahora.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      
+      // Formatear hora local manualmente para evitar problemas de zona horaria
+      const horas = ahora.getHours().toString().padStart(2, '0');
+      const minutos = ahora.getMinutes().toString().padStart(2, '0');
+      const segundos = ahora.getSeconds().toString().padStart(2, '0');
+      const horaActual = `${horas}:${minutos}:${segundos}`;
       
       // Preparar datos para insertar
-      const asistenciasData = Object.entries(asistencias).map(([alumnoId, presente]) => ({
+      const asistenciasParaGuardar = Object.entries(asistencias).map(([alumnoId, presente]) => ({
         alumno_id: parseInt(alumnoId),
         materia_id: parseInt(materiaSeleccionada),
         fecha,
         hora: horaActual,
         presente
       }));
-  
+
       // Insertar asistencias
       const { error } = await supabase
         .from('asistencias')
-        .upsert(asistenciasData, {
-          onConflict: 'alumno_id,materia_id,fecha',
+        .upsert(asistenciasParaGuardar, {
+          onConflict: 'alumno_id,fecha,materia_id',
           ignoreDuplicates: false
         });
-  
+
       if (error) {
         return { success: false, error: error.message };
       }
-  
+
       // Obtener información de la materia para las notificaciones
       const { data: materiaInfo } = await supabase
         .from('materias')
         .select('nombre')
         .eq('id', materiaSeleccionada)
         .single();
-  
+
       // Enviar notificaciones para alumnos ausentes
       const alumnosAusentes = Object.entries(asistencias)
         .filter(([_, presente]) => !presente)
         .map(([alumnoId]) => parseInt(alumnoId));
-  
+
       if (alumnosAusentes.length > 0) {
         // Obtener información de los alumnos ausentes
         const { data: infoAlumnos } = await supabase
@@ -265,7 +310,7 @@ export default function useAsistencias() {
             usuarios:usuario_id (nombre)
           `)
           .in('id', alumnosAusentes);
-  
+
         // Para cada alumno ausente, buscar sus padres y enviar notificación
         for (const alumno of infoAlumnos) {
           // Obtener los padres del alumno
@@ -281,7 +326,7 @@ export default function useAsistencias() {
             continue;
           }
 
-          // Obtener información de contacto de los padres
+          // Obtener información de contacto de los padres desde la tabla info_padres
           const padresIds = padresData.map(p => p.padre_id);
           
           const { data: infoPadres, error: infoPadresError } = await supabase
@@ -303,7 +348,7 @@ export default function useAsistencias() {
               nombreMateria: materiaInfo?.nombre || 'una materia'
             }));
           
-          // Aquí enviaríamos las notificaciones WhatsApp
+          // Enviar notificaciones WhatsApp
           if (padresNotificar.length > 0) {
             console.log('Generando enlaces WhatsApp para:', padresNotificar);
             
@@ -317,7 +362,7 @@ export default function useAsistencias() {
                   },
                   body: JSON.stringify({
                     telefono: padre.telefono,
-                    mensaje: `Su hijo/a ${padre.nombreAlumno} ha sido marcado como ausente en ${padre.nombreMateria} el día ${fecha} a las ${horaActual.substring(0, 5)}`,
+                    mensaje: `🚨 AUSENCIA ESCOLAR\n\nSu hijo/a ${padre.nombreAlumno} ha sido marcado como ausente en ${padre.nombreMateria} el día ${new Date().toLocaleDateString('es-ES')} a las ${horaActual.substring(0, 5)}.\n\nSi tiene alguna consulta, por favor contacte a la escuela.\n\nAsistenciApp Escolar`,
                   }),
                 });
                 
@@ -335,7 +380,7 @@ export default function useAsistencias() {
           }
         }
       }
-  
+
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -351,7 +396,6 @@ export default function useAsistencias() {
     grupoSeleccionado,
     materiaSeleccionada,
     asistencias,
-    asignaciones,
     setGrupoSeleccionado,
     setMateriaSeleccionada,
     cambiarAsistencia,

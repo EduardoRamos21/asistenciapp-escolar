@@ -260,13 +260,14 @@ export default function GestionAnunciosAdmin() {
           {anuncios.map((anuncio) => (
             <div key={anuncio.id} className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
               <div className="relative h-40 w-full">
-                <img
+                <Image
                   src={anuncio.imagen_url}
-                  alt={anuncio.titulo}
-                  className="object-cover w-full h-full"
+                  alt="Imagen del anuncio"
+                  width={200}
+                  height={150}
+                  className="w-full h-32 object-cover rounded-lg"
                   onError={(e) => {
-                    console.error('Error al cargar imagen:', anuncio.imagen_url);
-                    e.target.src = '/file.svg'; // Imagen de fallback
+                    e.target.src = '/logo.png';
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
@@ -430,15 +431,13 @@ export default function GestionAnunciosAdmin() {
                     </div>
                     {previewUrl && (
                       <div className="mt-4 relative h-40 w-full rounded-lg overflow-hidden">
-                        <img
-                          src={previewUrl}
-                          alt="Vista previa"
-                          className="object-cover w-full h-full"
-                          onError={(e) => {
-                            console.error('Error al cargar vista previa:', previewUrl);
-                            e.target.src = '/file.svg'; // Imagen de fallback
-                          }}
-                        />
+                       <Image
+                        src={imagenPreview}
+                        alt="Vista previa"
+                        width={200}
+                        height={150}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
                       </div>
                     )}
                   </div>

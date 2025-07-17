@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus, FiSend } from 'react-icons/fi'
 import { FaAd, FaHome } from 'react-icons/fa'
 import { supabase } from '@/lib/supabase'
@@ -8,17 +8,22 @@ import { useNotificaciones } from '@/contexts/NotificacionesContext';
 
 export default function LayoutAdmin({ children }) {
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isClient, setIsClient] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [usuario, setUsuario] = useState(null)
   
-  // Usamos useEffect para determinar si estamos en el cliente
+  // Referencias para evitar múltiples verificaciones
+  const verificandoRef = useRef(false)
+  const usuarioVerificadoRef = useRef(false)
+  // Nueva referencia para controlar la generación de tokens
+  const tokenGeneradoRef = useRef(false)
+  
   useEffect(() => {
     setIsClient(true)
   }, [])
   
-  // Solo accedemos al contexto de notificaciones si estamos en el cliente
+  // Contexto de notificaciones habilitado
   const notificaciones = useNotificaciones() || { inicializado: false }
   const { inicializado } = notificaciones
 
@@ -27,49 +32,121 @@ export default function LayoutAdmin({ children }) {
     if (!error) router.push('/')
   }
 
-  useEffect(() => {
-    const verificarAdmin = async () => {
-      // Verificar si ya tenemos el usuario para evitar solicitudes innecesarias
-      if (usuario && !loading) return;
+  // Nueva función para forzar la generación de token FCM
+  const forzarGeneracionTokenFCM = useCallback(async (userId) => {
+    if (tokenGeneradoRef.current) return;
+    tokenGeneradoRef.current = true;
+    
+    try {
+      console.log('🔄 Forzando generación de token FCM para admin:', userId);
       
-      const { data: { user } } = await supabase.auth.getUser()
+      // Verificar si ya existe un token activo para este usuario
+      const { data: tokenExistente, error: tokenError } = await supabase
+        .from('push_tokens')
+        .select('token')
+        .eq('user_id', userId)
+        .eq('activo', true)
+        .single();
+      
+      if (tokenExistente && !tokenError) {
+        console.log('✅ Token FCM ya existe para este usuario');
+        return;
+      }
+      
+      // Verificar soporte del navegador
+      if (!('Notification' in window)) {
+        console.log('❌ Este navegador no soporta notificaciones');
+        return;
+      }
+      
+      // Solicitar permisos si no están concedidos
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      
+      if (permission === 'granted') {
+        console.log('✅ Permisos concedidos, generando token FCM...');
+        
+        try {
+          // Importar y ejecutar la función de Firebase
+          const { requestNotificationPermission } = await import('@/lib/firebase');
+          const token = await requestNotificationPermission(userId, 'admin_sistema');
+          
+          if (token) {
+            console.log('🎉 Token FCM generado exitosamente:', token);
+          } else {
+            console.log('⚠️ No se pudo generar el token FCM');
+          }
+        } catch (firebaseError) {
+          console.error('❌ Error al generar token FCM:', firebaseError);
+        }
+      } else {
+        console.log('❌ Permisos de notificación denegados');
+      }
+    } catch (error) {
+      console.error('❌ Error en forzarGeneracionTokenFCM:', error);
+    }
+  }, []);
+
+  const verificarAdmin = useCallback(async () => {
+    if (verificandoRef.current || usuarioVerificadoRef.current) return;
+    verificandoRef.current = true;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/')
-        return
+        router.push('/');
+        return;
       }
 
       const { data, error } = await supabase
         .from('usuarios')
-        .select('rol')
+        .select('rol, nombre')
         .eq('id', user.id)
-        .single()
+        .single();
 
       if (error || !data || data.rol !== 'admin_sistema') {
-        router.push('/')
-        return
+        router.push('/');
+        return;
       }
       
-      setUsuario({
-        id: user.id
-      })
+      setUsuario({ 
+        id: user.id, 
+        nombre: data.nombre,
+        email: user.email 
+      });
+      usuarioVerificadoRef.current = true;
       
-      setLoading(false)
+      // Forzar generación de token FCM después de verificar el usuario
+      setTimeout(() => {
+        forzarGeneracionTokenFCM(user.id);
+      }, 2000); // Esperar 2 segundos para que el contexto se inicialice
+      
+    } catch (error) {
+      console.error('Error verificando admin:', error);
+      router.push('/');
+    } finally {
+      setLoading(false);
+      verificandoRef.current = false;
     }
+  }, [router, forzarGeneracionTokenFCM]);
 
-    verificarAdmin()
-  }, []) // Eliminar router como dependencia
+  useEffect(() => {
+    verificarAdmin();
+  }, [verificarAdmin]);
 
   // Mostrar indicador de carga si las notificaciones no están inicializadas
   if (isClient && !inicializado) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen h-screen bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
+    <div className="flex flex-col md:flex-row h-screen min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
       {/* Botón de menú móvil */}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button 
@@ -85,74 +162,63 @@ export default function LayoutAdmin({ children }) {
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static top-0 left-0 z-40 h-full w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-300 ease-in-out`}>
         <div>
-          <div className="flex flex-col items-center py-6 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
-            {/* Logo animado */}
-            <div className="relative w-20 h-20 mb-3 flex items-center justify-center">
+          <div className="flex items-center justify-center gap-3 p-6 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
+            <div className="relative w-12 h-12 flex items-center justify-center">
               <div className="absolute w-full h-full rounded-full bg-white/10 animate-[ping_3s_infinite] opacity-75"></div>
               <div className="absolute w-[85%] h-[85%] rounded-full bg-white/20"></div>
               <div className="absolute w-[70%] h-[70%] rounded-full bg-white/30"></div>
               <div className="absolute w-[55%] h-[55%] rounded-full bg-white/40 flex items-center justify-center">
-                <FiPlus className="text-white text-2xl" />
+                <FiPlus className="text-white text-xl" />
               </div>
             </div>
-            <h1 className="text-xl font-bold tracking-wide">AsistenciAPP</h1>
-            <p className="text-sm text-white/80">Administrador del Sistema</p>
+            <div>
+              <h1 className="text-xl font-bold">AsistenciApp</h1>
+              <p className="text-sm opacity-90">Administrador</p>
+            </div>
           </div>
 
-          <nav className="flex flex-col p-4 space-y-1 text-sm">
-            <Link href="/admin" className={navStyle(router, '/admin')}>
-              <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
-                <FaHome className="text-xl" />
-                <span>Dashboard</span>
-              </span>
+          <nav className="p-4 space-y-2">
+            <Link href="/admin" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${navStyle(router, '/admin')}`}>
+              <FaHome className="text-lg" />
+              <span>Dashboard</span>
             </Link>
-            <Link href="/admin/anuncios" className={navStyle(router, '/admin/anuncios')}>
-              <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
-                <FaAd className="text-xl" />
-                <span>Gestión de Anuncios</span>
-              </span>
-            </Link>
-            <Link href="/admin/notificaciones" className={navStyle(router, '/admin/notificaciones')}>
-              <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
-                <FiSend className="text-xl" />
-                <span>Gestión de Notificaciones</span>
-              </span>
-            </Link>
-            <Link href="/admin/cuenta" className={navStyle(router, '/admin/cuenta')}>
-              <span className="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ease-in-out">
-                <FiUser className="text-xl" />
-                <span>Mi Cuenta</span>
-              </span>
+            
+            <Link href="/admin/notificaciones" className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${navStyle(router, '/admin/notificaciones')}`}>
+              <FiSend className="text-lg" />
+              <span>Notificaciones</span>
             </Link>
           </nav>
         </div>
 
-        <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-1 text-sm">
-          <Link href="/ayuda" className="flex items-center gap-3 p-3 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out">
-            <FiHelpCircle className="text-xl" />
-            <span>Ayuda</span>
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 p-3 rounded-lg text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-500 dark:hover:text-red-400 transition-all duration-200 ease-in-out"
-          >
-            <FiLogOut className="text-xl" />
-            <span>Cerrar sesión</span>
-          </button>
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700">
+          <div className="space-y-2">
+            <Link href="/ayuda" className="flex items-center gap-3 p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <FiHelpCircle className="text-lg" />
+              <span className="text-sm">Ayuda</span>
+            </Link>
+            
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            >
+              <FiLogOut className="text-lg" />
+              <span className="text-sm">Cerrar Sesión</span>
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Overlay para cerrar el sidebar en móvil */}
+      {/* Overlay para móvil */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setSidebarOpen(false)}
-        ></div>
+        />
       )}
 
       {/* Contenido principal */}
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto animate-fade-in pt-16 md:pt-6 w-full max-h-[calc(100vh-60px)] flex flex-col">
-        <div className="flex-1 w-full">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </div>
       </main>

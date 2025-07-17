@@ -1,79 +1,162 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { FiUser, FiHelpCircle, FiLogOut, FiPlus } from 'react-icons/fi'
-import { HiOutlineClipboardCheck, HiOutlineClipboardList,HiUserGroup } from 'react-icons/hi'
+import { HiOutlineClipboardCheck, HiOutlineClipboardList, HiUserGroup } from 'react-icons/hi'
 import { supabase } from '@/lib/supabase'
-import { FiHome, FiCalendar } from 'react-icons/fi';
+import { FiHome, FiCalendar } from 'react-icons/fi'
 import BannerCarousel from '@/components/BannerCarousel'
-import { useNotificaciones } from '@/contexts/NotificacionesContext';
+import { useNotificaciones } from '@/contexts/NotificacionesContext'
 
-// Al inicio del componente LayoutMaestro
 export default function LayoutMaestro({ children }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [usuario, setUsuario] = useState(null);
-  const [isClient, setIsClient] = useState(false);
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [usuario, setUsuario] = useState(null)
+  const [isClient, setIsClient] = useState(false)
+  
+  const verificandoRef = useRef(false)
+  const usuarioVerificadoRef = useRef(false)
+  // Nueva referencia para controlar la generación de tokens
+  const tokenGeneradoRef = useRef(false)
   
   // Usamos useEffect para determinar si estamos en el cliente
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    setIsClient(true)
+  }, [])
   
   // Solo accedemos al contexto de notificaciones si estamos en el cliente
-  const notificaciones = useNotificaciones() || { inicializado: false };
-  const { inicializado } = notificaciones;
+  const notificaciones = useNotificaciones() || { inicializado: false }
+  const { inicializado } = notificaciones
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
     if (!error) router.push('/')
   }
 
-  useEffect(() => {
-    const fetchUsuario = async () => {
-      // Verificar si ya tenemos el usuario para evitar solicitudes innecesarias
-      if (usuario && !loading) return;
+  // Nueva función para forzar la generación de token FCM
+  const forzarGeneracionTokenFCM = useCallback(async (userId) => {
+    if (tokenGeneradoRef.current) return;
+    tokenGeneradoRef.current = true;
+    
+    try {
+      console.log('🔄 Forzando generación de token FCM para maestro:', userId);
       
+      // Verificar si ya existe un token activo para este usuario
+      const { data: tokenExistente, error: tokenError } = await supabase
+        .from('push_tokens')
+        .select('token')
+        .eq('user_id', userId)
+        .eq('activo', true)
+        .single();
+      
+      if (tokenExistente && !tokenError) {
+        console.log('✅ Token FCM ya existe para este usuario');
+        return;
+      }
+      
+      // Verificar soporte del navegador
+      if (!('Notification' in window)) {
+        console.log('❌ Este navegador no soporta notificaciones');
+        return;
+      }
+      
+      // Solicitar permisos si no están concedidos
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      
+      if (permission === 'granted') {
+        console.log('✅ Permisos concedidos, generando token FCM...');
+        
+        try {
+          // Importar y ejecutar la función de Firebase
+          const { requestNotificationPermission } = await import('@/lib/firebase');
+          const token = await requestNotificationPermission(userId, 'maestro');
+          
+          if (token) {
+            console.log('🎉 Token FCM generado exitosamente:', token);
+          } else {
+            console.log('⚠️ No se pudo generar el token FCM');
+          }
+        } catch (firebaseError) {
+          console.error('❌ Error al generar token FCM:', firebaseError);
+        }
+      } else {
+        console.log('❌ Permisos de notificación denegados');
+      }
+    } catch (error) {
+      console.error('❌ Error en forzarGeneracionTokenFCM:', error);
+    }
+  }, []);
+
+  const fetchUsuario = useCallback(async () => {
+    if (verificandoRef.current || usuarioVerificadoRef.current) return
+    verificandoRef.current = true
+    
+    try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
         return
       }
-  
-      // Verificar que el usuario es maestro
+
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('rol, nombre, avatar_url')
         .eq('id', user.id)
         .single()
-  
+
       if (userError || userData?.rol !== 'maestro') {
         router.push('/')
         return
       }
-  
+
       setUsuario({
         id: user.id,
         nombre: userData.nombre,
         email: user.email,
         avatar_url: userData.avatar_url
       })
-  
+      
+      usuarioVerificadoRef.current = true
+      
+      // NUEVA FUNCIONALIDAD: Forzar generación de token FCM después de verificar el usuario
+      setTimeout(() => {
+        forzarGeneracionTokenFCM(user.id);
+      }, 2000); // Esperar 2 segundos para que el contexto se inicialice
+      
+    } catch (error) {
+      console.error('Error verificando maestro:', error)
+      router.push('/')
+    } finally {
       setLoading(false)
+      verificandoRef.current = false
     }
-  
-    fetchUsuario()
-  }, []) // Eliminar router.pathname como dependencia
+  }, [router, forzarGeneracionTokenFCM])
 
-  // En el return, puedes mostrar un indicador de carga si las notificaciones no están inicializadas
+  useEffect(() => {
+    fetchUsuario()
+  }, [fetchUsuario])
+
+  // Mostrar indicador de carga si las notificaciones no están inicializadas
   if (isClient && !inicializado) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  // Mostrar indicador de carga solo cuando loading es true
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
   }
 
   return (
@@ -163,7 +246,7 @@ export default function LayoutMaestro({ children }) {
       
       {/* Footer con anuncios */}
       <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 backdrop-blur-sm shadow-lg w-full border-t border-blue-100 dark:border-gray-700 md:ml-64">
-        <div className="md:-ml-64"> {/* Compensación para centrar en pantallas grandes */}
+        <div className="md:-ml-64">
           <BannerCarousel />
         </div>
       </footer>

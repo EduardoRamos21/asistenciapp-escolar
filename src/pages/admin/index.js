@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { FaAd } from 'react-icons/fa';
-import { FiSend } from 'react-icons/fi';
+import { FiSend, FiUser } from 'react-icons/fi';
 
 export default function AdminDashboard() {
   const [usuario, setUsuario] = useState(null);
@@ -21,9 +21,10 @@ export default function AdminDashboard() {
       // Obtener usuario
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Cambiar esta línea:
         const { data } = await supabase
           .from('usuarios')
-          .select('nombre, img')
+          .select('nombre')  // ← Remover 'img' temporalmente
           .eq('id', user.id)
           .single();
         setUsuario(data);
@@ -70,14 +71,8 @@ export default function AdminDashboard() {
                 <p className="font-semibold text-gray-800 dark:text-gray-100">{usuario.nombre}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Administrador del Sistema</p>
               </div>
-              <div className="relative w-12 h-12 overflow-hidden rounded-full ring-2 ring-purple-500 dark:ring-purple-400">
-                <Image 
-                  src={usuario.img || "/perfil.jpg"} 
-                  alt="perfil" 
-                  width={48} 
-                  height={48} 
-                  className="object-cover" 
-                />
+              <div className="relative w-12 h-12 flex items-center justify-center rounded-full ring-2 ring-purple-500 dark:ring-purple-400 bg-purple-100 dark:bg-purple-900">
+                <FiUser className="text-purple-600 dark:text-purple-400 text-xl" />
               </div>
             </div>
           </Link>

@@ -83,7 +83,7 @@ export default function MaestroDashboard() {
             icon={<HiOutlineClipboardCheck className="text-4xl" />}
           />
         </Link>
-        <Link href="/maestro/historial" className="block">
+        <Link href="/maestro/tareas" className="block">
           <Card 
             color="from-indigo-500 to-indigo-600" 
             title="Tareas activas" 

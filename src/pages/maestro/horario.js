@@ -1,7 +1,8 @@
 import LayoutMaestro from '@/components/LayoutMaestro';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Agregar useRef
 import { supabase } from '@/lib/supabase';
 import { FiClock, FiCalendar, FiUser, FiBook, FiUsers } from 'react-icons/fi';
+import { useMemo } from 'react';
 
 export default function HorarioMaestro() {
   const [usuario, setUsuario] = useState(null);
@@ -9,13 +10,22 @@ export default function HorarioMaestro() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mensajeError, setMensajeError] = useState('');
+  
+  // Agregar useRef para evitar múltiples cargas
+  const cargandoDatosRef = useRef(false);
 
   // Nombres de los días de la semana
-  const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  // Línea 17 - Usar useMemo para el array diasSemana
+  const diasSemana = useMemo(() => [
+    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
+  ], []);
 
   // Obtener información del usuario y sus horarios
   useEffect(() => {
     const obtenerDatos = async () => {
+      if (cargandoDatosRef.current) return;
+      cargandoDatosRef.current = true;
+      
       try {
         setLoading(true);
         setError(null);
@@ -114,7 +124,7 @@ export default function HorarioMaestro() {
     };
 
     obtenerDatos();
-  }, []); // No incluir diasSemana en las dependencias
+  }, [diasSemana]); // Agregar 'diasSemana' a las dependencias
 
   // Agrupar horarios por día
   const horariosPorDia = {};

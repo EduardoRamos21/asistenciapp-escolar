@@ -1,4 +1,4 @@
-import Layout from '@/components/Layout';
+import LayoutDirector from '@/components/LayoutDirector'; // Cambiar esta línea
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -37,7 +37,7 @@ export default function DirectorDashboard() {
   }, []);
 
   return (
-    <Layout>
+    <LayoutDirector> {/* Cambiar Layout por LayoutDirector */}
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">{fecha}</h2>
         {usuario && (
@@ -63,18 +63,22 @@ export default function DirectorDashboard() {
 
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <Card 
-          color="from-blue-500 to-blue-600" 
-          title="Maestros" 
-          valor={loading ? '...' : estadisticas.totalMaestros} 
-          icon={<HiOutlineAcademicCap className="text-4xl" />}
-        />
-        <Card 
-          color="from-amber-400 to-amber-500" 
-          title="Alumnos" 
-          valor={loading ? '...' : estadisticas.totalAlumnos} 
-          icon={<HiOutlineAcademicCap className="text-4xl" />}
-        />
+        <Link href="/director/maestros" className="w-full">
+          <Card 
+            color="from-blue-500 to-blue-600" 
+            title="Maestros" 
+            valor={loading ? '...' : estadisticas.totalMaestros} 
+            icon={<HiOutlineAcademicCap className="text-4xl" />}
+          />
+        </Link>
+        <Link href="/director/grupos" className="w-full">
+          <Card 
+            color="from-amber-400 to-amber-500" 
+            title="Alumnos" 
+            valor={loading ? '...' : estadisticas.totalAlumnos} 
+            icon={<HiOutlineAcademicCap className="text-4xl" />}
+          />
+        </Link>
         <Card 
           color="from-emerald-500 to-emerald-600" 
           title="Asistencia del día" 
@@ -105,13 +109,13 @@ export default function DirectorDashboard() {
           <ActionButton text="Asignar padres" icon={<RiParentLine className="text-2xl" />} />
         </Link>
       </div>
-    </Layout>
+    </LayoutDirector>
   );
 }
 
 function Card({ color, title, valor, icon }) {
   return (
-    <div className={`bg-gradient-to-r ${color} text-white rounded-xl shadow-lg p-6 transition-transform hover:scale-105 overflow-hidden relative`}>
+    <div className={`bg-gradient-to-r ${color} text-white rounded-xl shadow-lg p-6 transition-transform hover:scale-105 overflow-hidden relative cursor-pointer`}>
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-xl font-semibold">{title}</h3>
         <div className="opacity-80">{icon}</div>

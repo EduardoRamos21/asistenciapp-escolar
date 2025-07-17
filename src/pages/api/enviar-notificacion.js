@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       .single();
 
     if (errorNotificacion) {
-      console.error('Error al guardar notificación:', errorNotificacion);
+      console.error('Error al guardar notificación:', errorNotificación);
       return res.status(500).json({ error: 'Error al guardar notificación' });
     }
 
@@ -117,16 +117,29 @@ export default async function handler(req, res) {
     }
 
     // Ahora buscar tokens para enviar notificaciones push
-    let tokensQuery = supabaseAdmin
+    // Después de obtener los tokens (alrededor de la línea 150)
+    const { data: tokens, error: errorTokens } = await supabaseAdmin
       .from('push_tokens')
-      .select('token, usuario_id, rol')
-      .in('usuario_id', usuarios.map(u => u.id))
-      .eq('activo', true); // Asegurarse de que solo se usen tokens activos
-
-    const { data: tokens, error: errorTokens } = await tokensQuery;
-
-    if (errorTokens) {
-      console.error('Error al buscar tokens:', errorTokens);
+      .select('token')
+      .eq('activo', true)
+      .in('usuario_id', usuarios.map(u => u.id));
+    
+    console.log('🔍 Tokens encontrados:', {
+      usuarios_encontrados: usuarios.length,
+      tokens_encontrados: tokens?.length || 0,
+      tokens_detalle: tokens?.map(t => ({ token: t.token.substring(0, 20) + '...' })) || [],
+      error_tokens: errorTokens
+    });
+    
+    if (!tokens || tokens.length === 0) {
+      console.log('⚠️ No se encontraron tokens push activos para los usuarios');
+      return res.status(200).json({
+        success: false,
+        message: 'No hay tokens push registrados para enviar notificaciones',
+        usuarios_notificados: usuarios.length,
+        tokens_enviados: 0,
+        tokens_exitosos: 0
+      });
     }
 
     // Eliminar tokens duplicados
@@ -134,12 +147,8 @@ export default async function handler(req, res) {
     const processedUserTokens = new Set();
 
     if (tokens && tokens.length > 0) {
-      // Filtrar tokens por rol si es necesario
-      const tokensFiltered = rol && rol !== 'todos' 
-        ? tokens.filter(t => t.rol === rol)
-        : tokens;
-      
-      tokensFiltered.forEach(t => {
+      // Usar directamente los tokens sin filtrado adicional
+      tokens.forEach(t => {
         const userTokenKey = `${t.usuario_id}_${t.token}`;
         if (!processedUserTokens.has(userTokenKey)) {
           uniqueTokens.push(t.token);

@@ -1,183 +1,231 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { requestNotificationPermission, setupMessageHandler, checkServiceWorkerRegistration } from '@/lib/firebase';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const NotificacionesContext = createContext();
 
 export function NotificacionesProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
-  const [permisoSolicitado, setPermisoSolicitado] = useState(false);
+  const [permisos, setPermisos] = useState(null);
   const [inicializado, setInicializado] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [permisoSolicitado, setPermisoSolicitado] = useState(false);
   const [errorNotificaciones, setErrorNotificaciones] = useState(null);
+  const [error, setError] = useState(null);
+  
+  // Referencias para evitar múltiples inicializaciones
+  const inicializandoRef = useRef(false);
+  const permisoSolicitadoRef = useRef(false);
+  const serviceWorkerRegistradoRef = useRef(false);
 
-  // Verificar si el usuario está autenticado
-  const obtenerUsuario = async () => {
+  // Función para obtener usuario
+  const obtenerUsuario = useCallback(async () => {
+    if (inicializandoRef.current) return;
+    inicializandoRef.current = true;
+    
     try {
       console.log('NotificacionesContext: Verificando usuario autenticado');
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      if (authError) {
-        console.error('NotificacionesContext: Error al obtener usuario:', authError);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('NotificacionesContext: Error al obtener sesión:', sessionError);
+        setSessionReady(true);
         return;
       }
       
-      console.log('NotificacionesContext: Usuario obtenido', user ? 'Sí' : 'No');
+      if (!session || !session.user) {
+        console.log('NotificacionesContext: No hay sesión activa');
+        setSessionReady(true);
+        return;
+      }
+      
+      const user = session.user;
+      console.log('NotificacionesContext: Usuario obtenido:', user.email);
       
       if (user) {
         setUsuario(user);
         
-        // Verificar que el ID de usuario sea válido antes de consultar
         if (!user.id) {
           console.error('NotificacionesContext: ID de usuario no válido');
+          setSessionReady(true);
           return;
         }
         
-        // Obtener rol del usuario
-        const { data: usuarioData, error: userError } = await supabase
-          .from('usuarios')
-          .select('rol')
-          .eq('id', user.id)
-          .single();
-        
-        if (userError) {
-          console.error('NotificacionesContext: Error al obtener rol del usuario:', userError);
-          return;
-        }
-        
-        console.log('NotificacionesContext: Rol del usuario', usuarioData?.rol);
-        
-        // Solicitar permiso para notificaciones
-        if (usuarioData && !permisoSolicitado) {
-          try {
-            console.log('NotificacionesContext: Solicitando permiso para notificaciones');
-            const permisoConcedido = await requestNotificationPermission(user.id, usuarioData.rol);
-            console.log('NotificacionesContext: Permiso concedido', permisoConcedido ? 'Sí' : 'No');
-            
-            if (permisoConcedido) {
-              setupMessageHandler();
-            }
-            setPermisoSolicitado(true);
-          } catch (error) {
-            console.error('NotificacionesContext: Error al solicitar permiso:', error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('NotificacionesContext: Error general al obtener usuario:', error);
-    }
-  };
-
-  useEffect(() => {
-    // Evitar inicialización si ya está inicializado
-    if (inicializado) return;
-    
-    console.log('NotificacionesContext: Inicializando');
-    
-    // Verificar registro del service worker
-    const verificarServiceWorker = async () => {
-      try {
-        const registrado = await checkServiceWorkerRegistration();
-        console.log('NotificacionesContext: Service Worker registrado:', registrado ? 'Sí' : 'No');
-      } catch (error) {
-        console.error('NotificacionesContext: Error al verificar Service Worker:', error);
-        setErrorNotificaciones('Error al verificar Service Worker: ' + error.message);
-      }
-    };
-    
-    // Añadir un pequeño retraso para asegurar que la autenticación esté lista
-    setTimeout(async () => {
-      try {
-        await verificarServiceWorker();
-        await obtenerUsuario();
-        setInicializado(true);
-      } catch (error) {
-        console.error('NotificacionesContext: Error en inicialización:', error);
-        setErrorNotificaciones('Error en inicialización: ' + error.message);
-      }
-    }, 1000); // Retraso de 1 segundo
-  }, []);
-
-  useEffect(() => {
-    // Escuchar cambios en la autenticación
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUsuario(session.user);
-        
-        try {
-          // Obtener rol del usuario
+        // Solo solicitar permiso una vez
+        if (!permisoSolicitadoRef.current) {
           const { data: usuarioData, error: userError } = await supabase
             .from('usuarios')
             .select('rol')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single();
-            
+        
           if (userError) {
-            console.error('NotificacionesContext: Error al obtener rol del usuario (auth change):', userError);
+            console.error('NotificacionesContext: Error al obtener rol del usuario:', userError);
+            setSessionReady(true);
             return;
           }
-            
-          if (usuarioData && !permisoSolicitado) {
-            // Solicitar permiso para notificaciones
+          
+          console.log('NotificacionesContext: Rol del usuario:', usuarioData?.rol);
+          
+          if (usuarioData) {
             try {
-              const permisoConcedido = await requestNotificationPermission(session.user.id, usuarioData.rol);
-              if (permisoConcedido) {
-                setupMessageHandler();
-              }
+              console.log('NotificacionesContext: Solicitando permiso para notificaciones');
+              const permisoConcedido = await requestNotificationPermission(user.id, usuarioData.rol);
+              console.log('NotificacionesContext: Permiso concedido:', permisoConcedido ? 'Sí' : 'No');
+              
               setPermisoSolicitado(true);
+              permisoSolicitadoRef.current = true;
             } catch (error) {
-              console.error('NotificacionesContext: Error al solicitar permiso (auth change):', error);
+              console.error('NotificacionesContext: Error al solicitar permiso:', error);
             }
           }
-        } catch (error) {
-          console.error('NotificacionesContext: Error general (auth change):', error);
         }
+      }
+      
+      setSessionReady(true);
+    } catch (error) {
+      console.error('NotificacionesContext: Error general al obtener usuario:', error);
+      setSessionReady(true);
+    } finally {
+      inicializandoRef.current = false;
+    }
+  }, []);
+
+  // Función requestNotificationPermission
+  const requestNotificationPermission = async (userId, userRole) => {
+    try {
+      console.log('🔔 Solicitando permisos para usuario:', userId, 'rol:', userRole);
+      
+      if (!('Notification' in window)) {
+        console.log('❌ Este navegador no soporta notificaciones');
+        return false;
+      }
+
+      const permission = await Notification.requestPermission();
+      console.log('📋 Permiso obtenido:', permission);
+      
+      setPermisos(permission);
+      
+      if (permission === 'granted') {
+        try {
+          const { requestNotificationPermission: firebaseRequest } = await import('@/lib/firebase');
+          const result = await firebaseRequest(userId, userRole);
+          console.log('🔥 Resultado de Firebase:', result);
+          
+          // Configurar manejador después de obtener el token
+          if (result) {
+            await setupMessageHandler();
+          }
+          
+          return result;
+        } catch (importError) {
+          console.error('❌ Error al importar Firebase:', importError);
+          return false;
+        }
+      }
+      
+      return permission === 'granted';
+    } catch (error) {
+      console.error('❌ Error al solicitar permiso de notificaciones:', error);
+      return false;
+    }
+  };
+
+  // Función para configurar el manejador de mensajes
+  const setupMessageHandler = async () => {
+    try {
+      const { setupMessageHandler: firebaseSetup } = await import('@/lib/firebase');
+      firebaseSetup();
+      console.log('✅ Manejador de mensajes configurado');
+    } catch (error) {
+      console.error('❌ Error al configurar manejador de mensajes:', error);
+    }
+  };
+
+  const verificarUsuarioAutenticado = useCallback(async () => {
+    await obtenerUsuario();
+  }, [obtenerUsuario]);
+
+  const verificarServiceWorker = async () => {
+    if (serviceWorkerRegistradoRef.current) return;
+    
+    try {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        serviceWorkerRegistradoRef.current = true;
+        console.log('Service Worker registrado');
+      }
+    } catch (error) {
+      console.error('Error al registrar Service Worker:', error);
+    }
+  };
+
+  // useEffect principal - Sistema de notificaciones
+  useEffect(() => {
+    const inicializar = async () => {
+      if (inicializandoRef.current) return;
+      inicializandoRef.current = true;
+      
+      try {
+        console.log('🚀 Iniciando sistema de notificaciones...');
+        
+        // Verificar service worker
+        await verificarServiceWorker();
+        
+        // Obtener usuario y configurar notificaciones
+        await obtenerUsuario();
+        
+        // Configurar manejador de mensajes en primer plano
+        await setupMessageHandler();
+        
+        console.log('✅ Sistema de notificaciones inicializado correctamente');
+        setInicializado(true);
+        
+      } catch (error) {
+        console.error('❌ Error al inicializar:', error);
+        setError(error.message);
+        setInicializado(true); // Marcar como inicializado para no bloquear
+      } finally {
+        inicializandoRef.current = false;
+      }
+    };
+    
+    // Inicializar inmediatamente
+    inicializar();
+  }, [obtenerUsuario]);
+
+  // useEffect para escuchar cambios de autenticación
+  useEffect(() => {
+    if (!sessionReady || !inicializado) return;
+    
+    // Escuchar cambios en la autenticación
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('NotificacionesContext: Auth state change:', event);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUsuario(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUsuario(null);
-        // No eliminamos el token, solo lo marcamos como inactivo si es necesario
+        setPermisoSolicitado(false);
+        permisoSolicitadoRef.current = false;
       }
     });
 
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [permisoSolicitado, inicializado]);
-  
+  }, [sessionReady, inicializado]);
+
   // Función para solicitar permiso manualmente
   const solicitarPermisoManualmente = async () => {
+    if (permisoSolicitadoRef.current) return;
+    permisoSolicitadoRef.current = true;
+    
     try {
-      if (!usuario) {
-        console.error('NotificacionesContext: No hay usuario autenticado');
-        return false;
-      }
-      
-      // Obtener rol del usuario
-      const { data: usuarioData, error: userError } = await supabase
-        .from('usuarios')
-        .select('rol')
-        .eq('id', usuario.id)
-        .single();
-        
-      if (userError) {
-        console.error('NotificacionesContext: Error al obtener rol del usuario (manual):', userError);
-        return false;
-      }
-      
-      if (usuarioData) {
-        console.log('NotificacionesContext: Solicitando permiso manualmente');
-        const permisoConcedido = await requestNotificationPermission(usuario.id, usuarioData.rol);
-        console.log('NotificacionesContext: Permiso concedido (manual)', permisoConcedido ? 'Sí' : 'No');
-        
-        if (permisoConcedido) {
-          setupMessageHandler();
-          setPermisoSolicitado(true);
-          return true;
-        }
-      }
-      
-      return false;
+      const permission = await Notification.requestPermission();
+      setPermisos(permission);
     } catch (error) {
-      console.error('NotificacionesContext: Error al solicitar permiso manualmente:', error);
-      return false;
+      console.error('Error al solicitar permisos:', error);
     }
   };
 
@@ -187,7 +235,7 @@ export function NotificacionesProvider({ children }) {
       usuario, 
       permisoSolicitado, 
       errorNotificaciones,
-      solicitarPermisoManualmente 
+      solicitarPermisoManualmente
     }}>
       {children}
     </NotificacionesContext.Provider>

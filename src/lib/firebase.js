@@ -29,86 +29,253 @@ if (typeof window !== 'undefined') {
 }
 
 // Función para solicitar permiso y registrar el token FCM
-// Reemplazar la función existente con esta versión mejorada
 export const requestNotificationPermission = async (userId, userRole) => {
   try {
+    console.log('🔔 Iniciando proceso de notificaciones...');
+    
     if (!messaging) {
-      console.log('Firebase Messaging no está soportado en este navegador');
+      console.log('❌ Firebase Messaging no está soportado en este navegador');
       return false;
     }
 
     // Verificar si las notificaciones están soportadas
     if (!('Notification' in window)) {
-      console.log('Este navegador no soporta notificaciones');
+      console.log('❌ Este navegador no soporta notificaciones');
       return false;
     }
 
+    // Detectar si es Edge
+    const isEdge = /Edg/i.test(navigator.userAgent);
+    console.log('🌐 Navegador detectado:', isEdge ? 'Edge' : 'Otro');
+
     // Verificar si ya tenemos permiso
     if (Notification.permission === 'granted') {
-      console.log('Permiso de notificación ya concedido, obteniendo token...');
+      console.log('✅ Permiso de notificación ya concedido');
+    } else if (Notification.permission === 'denied') {
+      console.log('❌ Permiso de notificación denegado previamente');
+      return false;
     } else {
       // Solicitar permiso
-      console.log('Solicitando permiso de notificación...');
-      const permission = await Notification.requestPermission();
+      console.log('🔔 Solicitando permiso de notificación...');
       
-      if (permission !== 'granted') {
-        console.log('Permiso de notificación denegado');
-        return false;
+      try {
+        let permission;
+        
+        if (isEdge) {
+          // Para Edge, usar la versión síncrona sin Promise.race
+          console.log('🔧 Usando método específico para Edge...');
+          
+          // Intentar primero la versión moderna
+          if (typeof Notification.requestPermission === 'function') {
+            try {
+              // Llamar de forma síncrona para Edge
+              const result = Notification.requestPermission();
+              
+              // Si devuelve una Promise (Edge moderno)
+              if (result && typeof result.then === 'function') {
+                permission = await Promise.race([
+                  result,
+                  new Promise((resolve) => {
+                    setTimeout(() => {
+                      console.log('⏰ Timeout en Edge, verificando permiso actual...');
+                      resolve(Notification.permission);
+                    }, 5000); // 5 segundos para Edge
+                  })
+                ]);
+              } else {
+                // Si devuelve directamente el resultado (Edge legacy)
+                permission = result;
+              }
+            } catch (edgeError) {
+              console.log('⚠️ Error en método moderno de Edge, intentando método legacy...');
+              
+              // Método legacy para Edge más antiguo
+              permission = await new Promise((resolve) => {
+                try {
+                  Notification.requestPermission((result) => {
+                    resolve(result);
+                  });
+                  
+                  // Timeout de seguridad
+                  setTimeout(() => {
+                    resolve(Notification.permission);
+                  }, 5000);
+                } catch (legacyError) {
+                  console.error('❌ Error en método legacy:', legacyError);
+                  resolve(Notification.permission);
+                }
+              });
+            }
+          }
+        } else {
+          // Para otros navegadores, método normal
+          permission = await Promise.race([
+            Notification.requestPermission(),
+            new Promise((resolve) => {
+              setTimeout(() => {
+                console.log('⏰ Timeout general, verificando permiso actual...');
+                resolve(Notification.permission);
+              }, 5000);
+            })
+          ]);
+        }
+        
+        console.log('🔔 Resultado del permiso:', permission);
+        
+        if (permission !== 'granted') {
+          console.log('❌ Permiso de notificación no concedido:', permission);
+          
+          // Para Edge, mostrar instrucciones al usuario
+          if (isEdge && permission === 'default') {
+            console.log('💡 Sugerencia: En Edge, es posible que necesites habilitar las notificaciones manualmente en la configuración del sitio.');
+          }
+          
+          return false;
+        }
+        
+        console.log('✅ Permiso de notificación concedido');
+      } catch (permissionError) {
+        console.error('❌ Error al solicitar permiso:', permissionError);
+        
+        // Verificar si el permiso se concedió a pesar del error
+        if (Notification.permission === 'granted') {
+          console.log('✅ Permiso concedido a pesar del error');
+        } else {
+          return false;
+        }
       }
-      console.log('Permiso de notificación concedido');
     }
 
-    // Verificar si el service worker está registrado
-    await checkServiceWorkerRegistration();
+    // Verificar y esperar a que el service worker esté activo
+    console.log('🔧 Verificando service worker...');
+    const swReady = await waitForServiceWorkerReady();
+    if (!swReady) {
+      console.log('⚠️ Service worker no está listo, continuando sin token FCM');
+      return false;
+    }
 
-    // Obtener token FCM
-    console.log('Obteniendo token FCM...');
-    console.log('VAPID Key:', process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY);
+    // Obtener token FCM con timeout
+    console.log('🎯 Obteniendo token FCM...');
     
     try {
-      const token = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
-      });
+      const tokenTimeout = isEdge ? 8000 : 5000; // Más tiempo para Edge
+      
+      const token = await Promise.race([
+        getToken(messaging, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+        }),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('TIMEOUT_FCM_TOKEN')), tokenTimeout);
+        })
+      ]);
 
       if (token) {
-        console.log('Token FCM obtenido:', token);
+        console.log('✅ Token FCM obtenido exitosamente');
         
-        // Guardar token en Supabase
-        await guardarTokenEnBaseDeDatos(token, userId, userRole);
-        return true;
+        // Guardar token en Supabase con timeout
+        const saveResult = await Promise.race([
+          guardarTokenEnBaseDeDatos(token, userId, userRole),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('TIMEOUT_SAVE_TOKEN')), 3000);
+          })
+        ]);
+        
+        console.log('💾 Token guardado:', saveResult ? '✅' : '❌');
+        return saveResult;
       } else {
-        console.log('No se pudo obtener el token');
+        console.log('❌ No se pudo obtener el token FCM');
         return false;
       }
     } catch (tokenError) {
-      console.error('Error al obtener token FCM:', tokenError);
+      console.error('❌ Error al obtener token FCM:', tokenError.message);
       
-      // Verificar si el error está relacionado con el service worker
-      if (tokenError.code === 'messaging/failed-service-worker-registration') {
-        console.log('Error con el registro del service worker, intentando registrar manualmente...');
-        try {
-          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-          console.log('Service worker registrado manualmente, reintentando obtener token...');
-          
-          // Reintentar obtener el token
-          const tokenRetry = await getToken(messaging, {
-            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
-          });
-          
-          if (tokenRetry) {
-            console.log('Token FCM obtenido en segundo intento:', tokenRetry);
-            await guardarTokenEnBaseDeDatos(tokenRetry, userId, userRole);
-            return true;
-          }
-        } catch (swError) {
-          console.error('Error al registrar service worker manualmente:', swError);
-        }
+      // Si es timeout, continuar sin bloquear
+      if (tokenError.message.includes('TIMEOUT')) {
+        console.log('⏰ Timeout detectado, continuando sin token FCM');
+        return false;
       }
       
       return false;
     }
   } catch (error) {
-    console.error('Error al solicitar permiso de notificación:', error);
+    console.error('❌ Error general en requestNotificationPermission:', error);
+    return false;
+  }
+};
+
+// Nueva función para esperar a que el service worker esté listo
+const waitForServiceWorkerReady = async () => {
+  try {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return false;
+    }
+
+    // Verificar si ya hay un service worker activo
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const activeRegistration = registrations.find(reg => reg.active && reg.active.state === 'activated');
+    
+    if (activeRegistration) {
+      console.log('✅ Service worker ya está activo');
+      return true;
+    }
+
+    // Si no hay service worker activo, intentar registrar uno nuevo
+    console.log('🔧 Registrando service worker...');
+    try {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      
+      // Detectar Edge para ajustar timeout
+      const isEdge = /Edg/i.test(navigator.userAgent);
+      const swTimeout = isEdge ? 12000 : 8000; // Más tiempo para Edge
+      
+      // Esperar a que el service worker esté listo
+      const isReady = await Promise.race([
+        new Promise((resolve) => {
+          if (registration.active) {
+            resolve(true);
+            return;
+          }
+          
+          const checkReady = () => {
+            if (registration.active && registration.active.state === 'activated') {
+              resolve(true);
+            } else if (registration.installing) {
+              registration.installing.addEventListener('statechange', () => {
+                if (registration.active && registration.active.state === 'activated') {
+                  resolve(true);
+                }
+              });
+            }
+          };
+          
+          checkReady();
+          
+          // Verificar cada 500ms
+          const interval = setInterval(() => {
+            checkReady();
+            if (registration.active && registration.active.state === 'activated') {
+              clearInterval(interval);
+            }
+          }, 500);
+        }),
+        new Promise((resolve) => {
+          setTimeout(() => resolve(false), swTimeout);
+        })
+      ]);
+      
+      if (isReady) {
+        console.log('✅ Service worker registrado y activo');
+        return true;
+      } else {
+        console.log('⏰ Timeout esperando service worker');
+        return false;
+      }
+    } catch (regError) {
+      console.error('❌ Error al registrar service worker:', regError);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error en waitForServiceWorkerReady:', error);
     return false;
   }
 };
@@ -116,7 +283,13 @@ export const requestNotificationPermission = async (userId, userRole) => {
 // Función para guardar el token en la base de datos
 const guardarTokenEnBaseDeDatos = async (token, userId, userRole) => {
   try {
-    console.log('Guardando token en base de datos:', { token, userId, userRole });
+    console.log('💾 Guardando token en base de datos...');
+    
+    // Validar parámetros
+    if (!token || !userId || !userRole) {
+      console.error('❌ Parámetros inválidos para guardar token');
+      return false;
+    }
     
     // Verificar si el token ya existe
     const { data: existingTokens, error: selectError } = await supabase
@@ -125,56 +298,48 @@ const guardarTokenEnBaseDeDatos = async (token, userId, userRole) => {
       .eq('token', token);
       
     if (selectError) {
-      console.error('Error al verificar token existente:', selectError);
+      console.error('❌ Error al verificar token existente:', selectError.message);
       return false;
     }
     
+    const tokenData = {
+      usuario_id: userId,
+      rol: userRole,
+      plataforma: detectarPlataforma(),
+      ultimo_acceso: new Date().toISOString(),
+      activo: true
+    };
+    
     if (existingTokens && existingTokens.length > 0) {
-      // Actualizar token existente con la nueva información
+      // Actualizar token existente
       const { error: updateError } = await supabase
         .from('push_tokens')
-        .update({
-          usuario_id: userId,
-          rol: userRole, // Añadir el rol del usuario
-          plataforma: detectarPlataforma(),
-          ultimo_acceso: new Date().toISOString(),
-          activo: true
-        })
+        .update(tokenData)
         .eq('token', token);
         
       if (updateError) {
-        console.error('Error al actualizar token:', updateError);
+        console.error('❌ Error al actualizar token:', updateError.message);
         return false;
       }
       
-      console.log('Token actualizado correctamente');
+      console.log('✅ Token actualizado correctamente');
       return true;
     } else {
       // Insertar nuevo token
       const { error: insertError } = await supabase
         .from('push_tokens')
-        .insert([
-          {
-            token,
-            usuario_id: userId,
-            rol: userRole, // Añadir el rol del usuario
-            plataforma: detectarPlataforma(),
-            fecha_registro: new Date().toISOString(),
-            ultimo_acceso: new Date().toISOString(),
-            activo: true
-          }
-        ]);
+        .insert({ token, ...tokenData });
         
       if (insertError) {
-        console.error('Error al insertar nuevo token:', insertError);
+        console.error('❌ Error al insertar token:', insertError.message);
         return false;
       }
       
-      console.log('Nuevo token insertado correctamente');
+      console.log('✅ Nuevo token insertado correctamente');
       return true;
     }
   } catch (error) {
-    console.error('Error al guardar token en la base de datos:', error);
+    console.error('❌ Error general al guardar token:', error.message);
     return false;
   }
 };

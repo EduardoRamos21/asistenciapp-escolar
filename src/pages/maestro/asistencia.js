@@ -1,7 +1,7 @@
 import LayoutMaestro from '@/components/LayoutMaestro';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import useAsistencias from '@/hooks/useAsistencias';
+import { useAsistencias } from '@/hooks/useAsistencias'; // Cambiar a named import
 import { supabase } from '@/lib/supabase';
 import { FiCheck, FiX, FiUser, FiCalendar } from 'react-icons/fi';
 
@@ -27,34 +27,9 @@ export default function Asistencia() {
     console.log('Materias disponibles:', materias);
   }, [grupos, materias]);
 
-  const [usuario, setUsuario] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
-
-  // Obtener información del usuario
-  useEffect(() => {
-    const obtenerUsuario = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('usuarios')
-          .select('nombre')
-          .eq('id', user.id)
-          .single();
-        
-        if (data) {
-          setUsuario({
-            id: user.id,
-            nombre: data.nombre,
-            email: user.email
-          });
-        }
-      }
-    };
-
-    obtenerUsuario();
-  }, []);
 
   const handleEnviarAsistencia = async () => {
     if (!grupoSeleccionado || !materiaSeleccionada) {
@@ -86,7 +61,7 @@ export default function Asistencia() {
 
   return (
     <LayoutMaestro>
-      {/* Encabezado con gradiente */}
+      {/* Encabezado con gradiente - ELIMINADO EL DUPLICADO */}
       <div className="flex justify-between items-center mb-6 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2">
           <FiCalendar className="text-blue-600 dark:text-blue-400" />
@@ -94,17 +69,6 @@ export default function Asistencia() {
             {new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
           </h2>
         </div>
-        {usuario && (
-          <div className="flex items-center gap-3 bg-indigo-600/10 dark:bg-indigo-400/10 px-3 py-2 rounded-lg">
-            <div className="text-right">
-              <p className="font-semibold text-gray-800 dark:text-gray-200">{usuario.nombre}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Profesor</p>
-            </div>
-            <div className="bg-indigo-100 dark:bg-indigo-800 p-1 rounded-full">
-              <FiUser className="text-indigo-600 dark:text-indigo-300 text-xl" />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Mensajes de notificación */}
@@ -139,7 +103,11 @@ export default function Asistencia() {
             <select 
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               value={grupoSeleccionado || ''}
-              onChange={(e) => setGrupoSeleccionado(e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) => {
+                const grupoId = e.target.value ? parseInt(e.target.value) : null;
+                setGrupoSeleccionado(grupoId);
+                setMateriaSeleccionada(null); // Reset materia cuando cambia grupo
+              }}
               disabled={loading || grupos.length === 0}
             >
               <option value="">Selecciona un grupo</option>
@@ -157,11 +125,18 @@ export default function Asistencia() {
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               value={materiaSeleccionada || ''}
               onChange={(e) => setMateriaSeleccionada(e.target.value ? parseInt(e.target.value) : null)}
-              disabled={loading || materias.length === 0}
+              disabled={loading || !grupoSeleccionado || materias.length === 0}
             >
               <option value="">Selecciona una materia</option>
               {materias
-                .filter(materia => !grupoSeleccionado || materia.grupo_id === parseInt(grupoSeleccionado))
+                .filter(materia => {
+                  // Buscar en asignaciones para verificar que la materia pertenece al grupo seleccionado
+                  return grupos.find(grupo => 
+                    grupo.id === grupoSeleccionado && 
+                    grupo.materias && 
+                    grupo.materias.some(m => m.id === materia.id)
+                  );
+                })
                 .map((materia) => (
                   <option key={materia.id} value={materia.id}>
                     {materia.nombre}

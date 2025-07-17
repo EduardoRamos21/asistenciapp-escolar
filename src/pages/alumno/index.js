@@ -58,12 +58,14 @@ export default function AlumnoDashboard() {
 
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <Card 
-          color="from-amber-400 to-amber-500" 
-          title="Tareas Pendientes" 
-          valor={loading ? '...' : estadisticas.tareasPendientes} 
-          icon={<HiOutlineClipboardList className="text-3xl" />}
-        />
+        <Link href="/alumno/tareas" className="block">
+          <Card 
+            color="from-amber-400 to-amber-500" 
+            title="Tareas Pendientes" 
+            valor={loading ? '...' : estadisticas.tareasPendientes} 
+            icon={<HiOutlineClipboardList className="text-3xl" />}
+          />
+        </Link>
         <Card 
           color="from-blue-500 to-blue-600" 
           title="Materias" 

@@ -55,11 +55,16 @@ export default function AuthPage() {
           throw new Error('Error al crear perfil de usuario: ' + errorInsert.message);
         }
 
+        // AGREGAR ESTA LÍNEA
+        setLoading(false);
         // Redirigir al panel de padre (rol predeterminado)
         router.push('/padre');
         return;
       }
 
+      // AGREGAR ESTA LÍNEA ANTES DE LAS REDIRECCIONES
+      setLoading(false);
+      
       // 3. Redirigir por rol
       if (usuario.rol === 'maestro') router.push('/maestro');
       else if (usuario.rol === 'padre') router.push('/padre');

@@ -1,8 +1,8 @@
 import LayoutMaestro from '@/components/LayoutMaestro';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { FiCalendar, FiUser, FiBook, FiCheck, FiX } from 'react-icons/fi';
-import useAsistencias from '@/hooks/useAsistencias';
+import { useAsistencias } from '@/hooks/useAsistencias';
 
 export default function HistorialAsistencias() {
   const [usuario, setUsuario] = useState(null);
